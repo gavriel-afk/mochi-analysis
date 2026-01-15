@@ -151,9 +151,16 @@ class AirtableClient:
             org_record = self.orgs_table.get(org_record_id)
             org_id = org_record["fields"].get("Organization ID", "")
 
-            # Parse stages (comma-separated string)
-            stages_str = fields.get("Stages", "")
-            stages = [s.strip() for s in stages_str.split(",") if s.strip()]
+            # Parse stages (comma-separated string or list)
+            stages_field = fields.get("Stages", "")
+            if isinstance(stages_field, list):
+                # If Stages is a multi-select field, it comes as a list
+                stages = stages_field
+            elif isinstance(stages_field, str):
+                # If Stages is a text field, split by comma
+                stages = [s.strip() for s in stages_field.split(",") if s.strip()]
+            else:
+                stages = []
 
             configs.append(
                 SlackDailyConfig(
