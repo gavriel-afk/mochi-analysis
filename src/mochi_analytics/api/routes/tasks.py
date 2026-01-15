@@ -92,9 +92,31 @@ async def debug_slack_configs():
     Debug endpoint to see what Slack configurations are available.
     """
     try:
+        # Get raw records to see what's in Airtable
+        from mochi_analytics.integrations.airtable import AirtableClient
+        client = AirtableClient()
+
+        # Get ALL records (active and inactive)
+        all_records = client.slack_table.all()
+
+        # Get processed configs
         configs = get_slack_configs(active_only=False)  # Get all, not just active
 
         return {
+            "total_raw_records": len(all_records),
+            "raw_records": [
+                {
+                    "record_id": r["id"],
+                    "fields": {
+                        "Active": r["fields"].get("Active"),
+                        "Schedule Time": r["fields"].get("Schedule Time"),
+                        "Slack Channel": r["fields"].get("Slack Channel"),
+                        "Organization": r["fields"].get("Organization"),
+                        "Analysis": r["fields"].get("Analysis")
+                    }
+                }
+                for r in all_records
+            ],
             "total_configs": len(configs),
             "configs": [
                 {
