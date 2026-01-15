@@ -15,19 +15,41 @@ from mochi_analytics.workers import run_daily_updates_task
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+# Store last task result for debugging
+_last_task_result = {"status": "no task run yet", "timestamp": None}
+
 
 def run_daily_updates_background(dry_run: bool, org_filter: str | None, force_send: bool):
     """Run daily updates in background thread."""
+    global _last_task_result
     try:
         logger.info(f"Background task started: dry_run={dry_run}, org_filter={org_filter}, force_send={force_send}")
+        _last_task_result = {
+            "status": "running",
+            "started_at": datetime.utcnow().isoformat(),
+            "org_filter": org_filter
+        }
         result = run_daily_updates_task(
             dry_run=dry_run,
             org_filter=org_filter,
             force_send=force_send
         )
         logger.info(f"Background task completed: {result}")
+        _last_task_result = {
+            "status": "completed",
+            "finished_at": datetime.utcnow().isoformat(),
+            "result": result
+        }
     except Exception as e:
-        logger.error(f"Background task failed: {e}")
+        import traceback
+        error_details = traceback.format_exc()
+        logger.error(f"Background task failed: {e}\n{error_details}")
+        _last_task_result = {
+            "status": "failed",
+            "finished_at": datetime.utcnow().isoformat(),
+            "error": str(e),
+            "traceback": error_details
+        }
 
 
 @router.post("/tasks/daily-updates", response_model=TaskResponse)
@@ -101,6 +123,14 @@ async def run_auto_export(request: TaskRequest) -> TaskResponse:
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Task failed: {e}")
+
+
+@router.get("/tasks/status")
+async def get_task_status():
+    """
+    Get the status of the last background task.
+    """
+    return _last_task_result
 
 
 @router.get("/tasks/slack-configs")
