@@ -194,7 +194,7 @@ def run_daily_updates_task(dry_run: bool = False, org_filter: str | None = None,
                         org_name=org.organization_name,
                         instagram_handle=org.instagram_username,
                         summary=result.summary.model_dump(),
-                        setters=result.setters_by_assignment.model_dump() if result.setters_by_assignment else None,
+                        setters=result.setters_by_sent_by if result.setters_by_sent_by else None,
                         date_range=str(yesterday)
                     )
                     logger.info(f"Sent daily digest for {org_id} to {config.slack_channel}")

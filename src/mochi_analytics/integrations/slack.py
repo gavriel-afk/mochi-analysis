@@ -128,9 +128,10 @@ class SlackClient:
             API response
         """
         # Build header text
-        header_text = f"Daily Update - {org_name}"
         if instagram_handle:
-            header_text = f"Daily Update - @{instagram_handle}"
+            header_text = f"@{instagram_handle} - What happened yesterday in Mochi:"
+        else:
+            header_text = f"{org_name} - What happened yesterday in Mochi:"
 
         # Build blocks
         blocks = [
@@ -138,59 +139,22 @@ class SlackClient:
                 "type": "header",
                 "text": {
                     "type": "plain_text",
-                    "text": header_text
+                    "text": header_text,
+                    "emoji": True
                 }
             }
         ]
 
-        # Add date range if provided
-        if date_range:
-            blocks.append({
-                "type": "context",
-                "elements": [
-                    {
-                        "type": "mrkdwn",
-                        "text": f"*Period:* {date_range}"
-                    }
-                ]
-            })
-
-        # Add divider
-        blocks.append({"type": "divider"})
-
-        # Add metrics section
-        metrics_text = "*Yesterday's Metrics*\n\n"
-        metrics_text += f"• *Conversations:* {summary.get('total_conversations', 0)}\n"
-        metrics_text += f"• *Messages Sent:* {summary.get('total_messages_sent', 0)}\n"
-        metrics_text += f"• *Messages Received:* {summary.get('total_messages_received', 0)}\n"
-
-        reply_rate = summary.get('creator_message_reply_rate_within_48h')
-        if reply_rate is not None:
-            metrics_text += f"• *Reply Rate (48h):* {reply_rate:.1f}%\n"
-
-        median_delay = summary.get('median_reply_delay_seconds')
-        if median_delay is not None:
-            hours = median_delay / 3600
-            metrics_text += f"• *Median Reply Time:* {hours:.1f} hours\n"
-
-        blocks.append({
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": metrics_text
-            }
-        })
-
-        # Add stage changes if available
+        # Add total stage changes at the top
         stage_changes = summary.get('stage_changes', {})
         if stage_changes:
-            blocks.append({"type": "divider"})
-
-            stage_text = "*Stage Changes*\n\n"
-            for stage, count in stage_changes.items():
+            stage_text = ""
+            for stage, count in sorted(stage_changes.items()):
                 if count > 0:
                     stage_name = stage.replace('_', ' ').title()
-                    stage_text += f"• {stage_name}: {count}\n"
+                    stage_text += f"*{stage_name}:* {count}\n"
+
+            stage_text += "\n_Below is the breakdown per setter:_"
 
             blocks.append({
                 "type": "section",
@@ -202,24 +166,55 @@ class SlackClient:
 
         # Add setter performance if available
         if setters:
-            setter_list = setters.get('setters', [])
-            if setter_list:
+            # setters is a dict like {"setter@email.com": SetterMetrics}
+            for setter_email, metrics in setters.items():
+                # Add divider before each setter
                 blocks.append({"type": "divider"})
 
-                setter_text = "*Top Setters*\n\n"
-                for i, setter in enumerate(setter_list[:5], 1):  # Top 5
-                    email = setter.get('setter_email', 'Unknown')
-                    convos = setter.get('total_conversations', 0)
-                    msgs = setter.get('messages_sent', 0)
-                    setter_text += f"{i}. {email} - {convos} convos, {msgs} msgs\n"
+                # Add setter name in bold using rich_text
+                blocks.append({
+                    "type": "rich_text",
+                    "elements": [
+                        {
+                            "type": "rich_text_section",
+                            "elements": [
+                                {
+                                    "type": "text",
+                                    "text": setter_email,
+                                    "style": {"bold": True}
+                                }
+                            ]
+                        }
+                    ]
+                })
 
+                # Add messages sent count
+                messages_sent = metrics.get('total_messages_sent_from_mochi', 0)
                 blocks.append({
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": setter_text
+                        "text": f"*Messages sent from Mochi:* {messages_sent}"
                     }
                 })
+
+                # Add stage breakdown in 2-column format
+                setter_stages = metrics.get('stage_changes', {})
+                if setter_stages:
+                    fields = []
+                    for stage, count in sorted(setter_stages.items()):
+                        if count > 0:
+                            stage_name = stage.replace('_', ' ').title()
+                            fields.append({
+                                "type": "mrkdwn",
+                                "text": f"*{stage_name}:* {count}"
+                            })
+
+                    if fields:
+                        blocks.append({
+                            "type": "section",
+                            "fields": fields[:10]  # Slack max 10 fields
+                        })
 
         # Send message
         fallback_text = f"Daily update for {org_name}"
