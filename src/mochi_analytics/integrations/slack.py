@@ -112,7 +112,8 @@ class SlackClient:
         summary: dict[str, Any],
         setters: dict[str, Any] | None = None,
         date_range: str | None = None,
-        stage_labels: dict[str, str] | None = None
+        stage_labels: dict[str, str] | None = None,
+        script_results: list | None = None
     ) -> dict[str, Any]:
         """
         Send a formatted daily digest message.
@@ -125,6 +126,7 @@ class SlackClient:
             setters: Setter analysis data (optional)
             date_range: Date range string (e.g., "Jan 8 - Jan 14")
             stage_labels: Stage name to display label mapping from Analysis table
+            script_results: Script search results (optional)
 
         Returns:
             API response
@@ -167,6 +169,32 @@ class SlackClient:
                     "text": stage_text
                 }
             })
+
+        # Add script performance section if available
+        if script_results:
+            blocks.append({"type": "divider"})
+            blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*Script Performance*"
+                }
+            })
+
+            for result in script_results:
+                script_text = (
+                    f"*{result.label}*\n"
+                    f"Matches: {result.total_matches} | "
+                    f"Replies: {result.total_replies} | "
+                    f"Reply Rate: {result.reply_rate}%"
+                )
+                blocks.append({
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": script_text
+                    }
+                })
 
         # Add setter performance if available
         if setters:
@@ -252,7 +280,8 @@ def send_daily_digest(
     setters: dict[str, Any] | None = None,
     date_range: str | None = None,
     bot_token: str | None = None,
-    stage_labels: dict[str, str] | None = None
+    stage_labels: dict[str, str] | None = None,
+    script_results: list | None = None
 ) -> dict[str, Any]:
     """
     Send daily digest message (convenience function).
@@ -266,6 +295,7 @@ def send_daily_digest(
         date_range: Date range string (optional)
         bot_token: Bot token (uses env var if not provided)
         stage_labels: Stage name to display label mapping from Analysis table
+        script_results: Script search results (optional)
 
     Returns:
         API response
@@ -282,5 +312,6 @@ def send_daily_digest(
             summary=summary,
             setters=setters,
             date_range=date_range,
-            stage_labels=stage_labels
+            stage_labels=stage_labels,
+            script_results=script_results
         )

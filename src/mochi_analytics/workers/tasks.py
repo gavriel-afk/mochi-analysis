@@ -8,6 +8,7 @@ import pytz
 
 from mochi_analytics.core.models import Conversation, AnalysisConfig
 from mochi_analytics.core.analyzer import analyze_conversations, analyze_conversations_simplified
+from mochi_analytics.core.script_search import run_script_searches
 from mochi_analytics.integrations import fetch_conversations, get_slack_configs, send_daily_digest
 from mochi_analytics.exporters.charts import generate_all_charts
 from mochi_analytics.storage.database import get_session
@@ -202,6 +203,17 @@ def run_daily_updates_task(dry_run: bool = False, org_filter: str | None = None,
                 end_date=yesterday_org_tz
             )
 
+            # Run script analysis if configured
+            script_results = None
+            if config.script_configs:
+                logger.info(f"Running {len(config.script_configs)} script searches for {org.organization_name}")
+                script_results = run_script_searches(
+                    conversations=conversations,
+                    script_configs=config.script_configs,
+                    timezone=org.timezone,
+                    target_date=yesterday_org_tz
+                )
+
             # Send Slack digest
             if not dry_run:
                 send_daily_digest(
@@ -211,7 +223,8 @@ def run_daily_updates_task(dry_run: bool = False, org_filter: str | None = None,
                     summary=result.summary.model_dump(),
                     setters=result.setters_by_sent_by if result.setters_by_sent_by else None,
                     date_range=str(yesterday_org_tz),
-                    stage_labels=config.stage_labels
+                    stage_labels=config.stage_labels,
+                    script_results=script_results
                 )
                 logger.info(f"Sent daily digest for {org_id} to {config.slack_channel}")
                 updates_sent += 1

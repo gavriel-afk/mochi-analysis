@@ -23,6 +23,21 @@ class OrganizationConfig(BaseModel):
     active: bool = Field(default=True, description="Whether org is active")
 
 
+class ScriptAnalysisConfig(BaseModel):
+    """Configuration for script similarity analysis."""
+
+    query: str = Field(..., description="Query text to search for (from Name field)")
+    label: str = Field(..., description="Display label for Slack message")
+    match_type: str = Field(
+        default="token_set",
+        description="Match type: 'ratio', 'token_set', or 'partial'"
+    )
+    threshold: float = Field(
+        default=85.0,
+        description="Similarity threshold percentage (0-100)"
+    )
+
+
 class SlackDailyConfig(BaseModel):
     """Configuration for daily Slack updates."""
 
@@ -32,6 +47,10 @@ class SlackDailyConfig(BaseModel):
     stage_labels: dict[str, str] = Field(
         default_factory=dict,
         description="Stage name to display label mapping from Analysis table (e.g., {'Won': 'closed'})"
+    )
+    script_configs: list[ScriptAnalysisConfig] = Field(
+        default_factory=list,
+        description="Script analysis configurations from Analysis table (Type='script')"
     )
     schedule_time: str = Field(
         default="",
@@ -161,6 +180,7 @@ class AirtableClient:
             # Fetch linked Analysis records
             analysis_links = fields.get("Analysis", [])
             stage_labels = {}
+            script_configs = []
 
             if analysis_links:
                 logger.debug(f"Org {org_name}: found {len(analysis_links)} Analysis links")
@@ -169,19 +189,38 @@ class AirtableClient:
                         analysis_record = self.analysis_table.get(analysis_record_id)
                         analysis_fields = analysis_record["fields"]
 
-                        # Filter: accept Type="metrics" or Type="script"
                         record_type = analysis_fields.get("Type", "")
-                        if record_type not in ("metrics", "script"):
+
+                        if record_type == "metrics":
+                            # Parse metrics: Name -> stage name, Label -> display label
+                            stage_name = analysis_fields.get("Name", "")
+                            stage_label = analysis_fields.get("Label", "")
+
+                            if stage_name:
+                                stage_labels[stage_name] = stage_label if stage_label else stage_name
+                                logger.debug(f"Org {org_name}: added stage '{stage_name}' -> '{stage_labels[stage_name]}'")
+
+                        elif record_type == "script":
+                            # Parse script: Name -> query, Group -> match_type, Percentage -> threshold
+                            query = analysis_fields.get("Name", "")
+                            label = analysis_fields.get("Label", "")
+                            match_type = analysis_fields.get("Group", "token_set")
+                            threshold = analysis_fields.get("Percentage", 85.0)
+
+                            if query:
+                                # Validate match_type
+                                if match_type not in ("ratio", "token_set", "partial"):
+                                    match_type = "token_set"
+
+                                script_configs.append(ScriptAnalysisConfig(
+                                    query=query,
+                                    label=label if label else query[:50],
+                                    match_type=match_type,
+                                    threshold=float(threshold) if threshold else 85.0
+                                ))
+                                logger.debug(f"Org {org_name}: added script config '{label or query[:50]}'")
+                        else:
                             logger.debug(f"Org {org_name}: skipping Analysis record with Type='{record_type}'")
-                            continue
-
-                        stage_name = analysis_fields.get("Name", "")
-                        stage_label = analysis_fields.get("Label", "")
-
-                        if stage_name:
-                            # Use Label if provided, else use Name as-is (no transformation)
-                            stage_labels[stage_name] = stage_label if stage_label else stage_name
-                            logger.debug(f"Org {org_name}: added stage '{stage_name}' -> '{stage_labels[stage_name]}'")
                     except Exception as e:
                         logger.warning(f"Failed to fetch Analysis record {analysis_record_id}: {e}")
             else:
@@ -193,13 +232,14 @@ class AirtableClient:
                 logger.info(f"Org {org_name}: no Schedule Time set (will only run with force_send=True)")
                 schedule_time = ""  # Empty string indicates no schedule
 
-            logger.info(f"Org {org_name}: adding config with {len(stage_labels)} stage labels")
+            logger.info(f"Org {org_name}: adding config with {len(stage_labels)} stage labels, {len(script_configs)} script configs")
             configs.append(
                 SlackDailyConfig(
                     record_id=record["id"],
                     organization_id=org_id,
                     slack_channel=fields.get("Slack Channel", ""),
                     stage_labels=stage_labels,
+                    script_configs=script_configs,
                     schedule_time=schedule_time,
                     active=fields.get("Active", False)
                 )
