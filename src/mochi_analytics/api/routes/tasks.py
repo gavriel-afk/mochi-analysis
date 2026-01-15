@@ -2,41 +2,58 @@
 Scheduled tasks API routes.
 """
 
+import logging
+import threading
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 
 from mochi_analytics.api.models import TaskRequest, TaskResponse
 from mochi_analytics.integrations import get_organizations, get_slack_configs
 from mochi_analytics.workers import run_daily_updates_task
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+def run_daily_updates_background(dry_run: bool, org_filter: str | None, force_send: bool):
+    """Run daily updates in background thread."""
+    try:
+        logger.info(f"Background task started: dry_run={dry_run}, org_filter={org_filter}, force_send={force_send}")
+        result = run_daily_updates_task(
+            dry_run=dry_run,
+            org_filter=org_filter,
+            force_send=force_send
+        )
+        logger.info(f"Background task completed: {result}")
+    except Exception as e:
+        logger.error(f"Background task failed: {e}")
 
 
 @router.post("/tasks/daily-updates", response_model=TaskResponse)
-async def run_daily_updates(request: TaskRequest) -> TaskResponse:
+async def run_daily_updates(request: TaskRequest, background_tasks: BackgroundTasks) -> TaskResponse:
     """
     Run daily Slack update task.
 
     Set force_send=True for manual runs (send immediately, ignore schedule).
     Set force_send=False for automated cron (respect each org's schedule_time).
+
+    Task runs in background - returns immediately.
     """
-    try:
-        result = run_daily_updates_task(
-            dry_run=request.dry_run,
-            org_filter=request.org_filter,
-            force_send=request.force_send
-        )
+    # Run in background to avoid Render timeout
+    background_tasks.add_task(
+        run_daily_updates_background,
+        request.dry_run,
+        request.org_filter,
+        request.force_send
+    )
 
-        return TaskResponse(
-            status="completed",
-            message=f"Sent {result['updates_sent']} updates",
-            jobs_created=result['updates_sent'],
-            errors=result.get('errors', [])
-        )
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Task failed: {e}")
+    return TaskResponse(
+        status="started",
+        message=f"Task started in background for org_filter={request.org_filter}",
+        jobs_created=0,
+        errors=[]
+    )
 
 
 @router.post("/tasks/auto-export", response_model=TaskResponse)
