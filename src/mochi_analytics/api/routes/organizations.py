@@ -14,7 +14,7 @@ from mochi_analytics.api.models import (
     OrganizationListResponse,
     OrganizationResponse,
 )
-from mochi_analytics.core.analyzer import run_full_analysis
+from mochi_analytics.core.analyzer import analyze_conversations
 from mochi_analytics.core.models import AnalysisConfig, Conversation
 from mochi_analytics.integrations import MochiAPIError, fetch_conversations, get_organization_by_id, get_organizations
 from mochi_analytics.storage.database import get_session
@@ -119,7 +119,7 @@ async def analyze_organization(org_id: str, request: OrganizationAnalysisRequest
             )
 
             # Run analysis
-            result = run_full_analysis(
+            result = analyze_conversations(
                 conversations=conversations,
                 config=config
             )
