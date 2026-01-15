@@ -53,7 +53,7 @@ class Conversation(BaseModel):
     organization_id: str
     organization_name: Optional[str] = None
     current_stage: str  # NEW, QUALIFIED, etc.
-    setter_email: str
+    setter_email: Optional[str] = "Unassigned"
     messages: list[dict]  # Can contain messages or status changes
 
     # Optional fields
