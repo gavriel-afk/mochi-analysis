@@ -152,16 +152,28 @@ def run_daily_updates_task(dry_run: bool = False, org_filter: str | None = None,
         try:
             org_id = config.organization_id
 
-            # Calculate date range (yesterday)
-            today = datetime.utcnow().date()
-            yesterday = today - timedelta(days=1)
+            # Get org timezone
+            from mochi_analytics.integrations import get_organization_by_id
+            org = get_organization_by_id(org_id)
+            if not org:
+                logger.warning(f"Organization {org_id} not found in Airtable")
+                continue
 
-            # Fetch conversations
+            # Calculate yesterday in org's timezone
+            org_tz = pytz.timezone(org.timezone)
+            org_now = datetime.now(org_tz)
+            yesterday_org_tz = (org_now - timedelta(days=1)).date()
+
+            # Add 1-day buffer on each side for fetching
+            fetch_from = yesterday_org_tz - timedelta(days=1)
+            fetch_to = yesterday_org_tz + timedelta(days=1)
+
+            # Fetch conversations with buffer
             try:
                 conversations_data = fetch_conversations(
                     org_id=org_id,
-                    date_from=yesterday,
-                    date_to=yesterday
+                    date_from=fetch_from,
+                    date_to=fetch_to
                 )
             except Exception as e:
                 logger.error(f"Failed to fetch conversations for {org_id}: {e}")
@@ -169,39 +181,34 @@ def run_daily_updates_task(dry_run: bool = False, org_filter: str | None = None,
                 continue
 
             if not conversations_data:
-                logger.info(f"No conversations for {org_id} on {yesterday}")
+                logger.info(f"No conversations for {org_id} on {yesterday_org_tz}")
                 continue
 
             # Parse conversations
             conversations = [Conversation.model_validate(c) for c in conversations_data]
 
             # Run simplified analysis (no LLM features)
+            # Use org's timezone and only analyze yesterday in that timezone
             result = analyze_conversations_simplified(
                 conversations,
-                timezone="UTC",
-                start_date=yesterday,
-                end_date=yesterday
+                timezone=org.timezone,
+                start_date=yesterday_org_tz,
+                end_date=yesterday_org_tz
             )
 
             # Send Slack digest
             if not dry_run:
-                from mochi_analytics.integrations import get_organization_by_id
-
-                org = get_organization_by_id(org_id)
-                if org:
-                    send_daily_digest(
-                        channel=config.slack_channel,
-                        org_name=org.organization_name,
-                        instagram_handle=org.instagram_username,
-                        summary=result.summary.model_dump(),
-                        setters=result.setters_by_sent_by if result.setters_by_sent_by else None,
-                        date_range=str(yesterday),
-                        configured_stages=config.stages
-                    )
-                    logger.info(f"Sent daily digest for {org_id} to {config.slack_channel}")
-                    updates_sent += 1
-                else:
-                    logger.warning(f"Organization {org_id} not found in Airtable")
+                send_daily_digest(
+                    channel=config.slack_channel,
+                    org_name=org.organization_name,
+                    instagram_handle=org.instagram_username,
+                    summary=result.summary.model_dump(),
+                    setters=result.setters_by_sent_by if result.setters_by_sent_by else None,
+                    date_range=str(yesterday_org_tz),
+                    configured_stages=config.stages
+                )
+                logger.info(f"Sent daily digest for {org_id} to {config.slack_channel}")
+                updates_sent += 1
             else:
                 logger.info(f"[DRY RUN] Would send digest for {org_id}")
                 updates_sent += 1
