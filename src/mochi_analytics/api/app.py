@@ -1,5 +1,7 @@
 """
 FastAPI application for Mochi Analytics.
+
+Version: 2.0.0
 """
 
 import os
