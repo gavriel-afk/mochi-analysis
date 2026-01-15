@@ -2,11 +2,14 @@
 Airtable integration for organization configuration and Slack channel mappings.
 """
 
+import logging
 import os
 from typing import Any
 
 from pydantic import BaseModel, Field
 from pyairtable import Api
+
+logger = logging.getLogger(__name__)
 
 
 class OrganizationConfig(BaseModel):
@@ -137,6 +140,7 @@ class AirtableClient:
         """
         formula = "{Active} = TRUE()" if active_only else None
         records = self.slack_table.all(formula=formula)
+        logger.info(f"Found {len(records)} Slack Daily records (active_only={active_only})")
 
         configs = []
         for record in records:
@@ -145,25 +149,30 @@ class AirtableClient:
             # Get linked organization ID
             org_links = fields.get("Organization", [])
             if not org_links:
+                logger.debug(f"Skipping record {record['id']}: no Organization linked")
                 continue  # Skip if no org linked
 
             # Fetch the linked organization record to get the org ID
             org_record_id = org_links[0]
             org_record = self.orgs_table.get(org_record_id)
             org_id = org_record["fields"].get("Organization ID", "")
+            org_name = org_record["fields"].get("Organization Name", "Unknown")
 
             # Fetch linked Analysis records
             analysis_links = fields.get("Analysis", [])
             stage_labels = {}
 
             if analysis_links:
+                logger.debug(f"Org {org_name}: found {len(analysis_links)} Analysis links")
                 for analysis_record_id in analysis_links:
                     try:
                         analysis_record = self.analysis_table.get(analysis_record_id)
                         analysis_fields = analysis_record["fields"]
 
                         # Filter: only Type="metrics"
-                        if analysis_fields.get("Type", "") != "metrics":
+                        record_type = analysis_fields.get("Type", "")
+                        if record_type != "metrics":
+                            logger.debug(f"Org {org_name}: skipping Analysis record with Type='{record_type}'")
                             continue
 
                         stage_name = analysis_fields.get("Name", "")
@@ -172,14 +181,19 @@ class AirtableClient:
                         if stage_name:
                             # Use Label if provided, else use Name as-is (no transformation)
                             stage_labels[stage_name] = stage_label if stage_label else stage_name
+                            logger.debug(f"Org {org_name}: added stage '{stage_name}' -> '{stage_labels[stage_name]}'")
                     except Exception as e:
                         logger.warning(f"Failed to fetch Analysis record {analysis_record_id}: {e}")
+            else:
+                logger.warning(f"Org {org_name}: no Analysis records linked")
 
             # Skip if schedule_time is empty
             schedule_time = fields.get("Schedule Time", "").strip()
             if not schedule_time:
+                logger.warning(f"Org {org_name}: skipping due to empty Schedule Time")
                 continue  # Skip orgs without a schedule time
 
+            logger.info(f"Org {org_name}: adding config with {len(stage_labels)} stage labels")
             configs.append(
                 SlackDailyConfig(
                     record_id=record["id"],
@@ -191,6 +205,7 @@ class AirtableClient:
                 )
             )
 
+        logger.info(f"Returning {len(configs)} Slack configs")
         return configs
 
     def get_slack_config_for_org(self, org_id: str) -> SlackDailyConfig | None:
