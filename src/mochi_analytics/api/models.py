@@ -41,6 +41,7 @@ class TaskRequest(BaseModel):
 
     org_filter: str | None = Field(None, description="Optional organization name filter")
     dry_run: bool = Field(default=False, description="If true, don't actually perform actions")
+    force_send: bool = Field(default=False, description="If true, ignore schedule_time and send immediately (for manual runs)")
 
 
 # Response models

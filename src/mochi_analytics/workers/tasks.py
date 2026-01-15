@@ -4,6 +4,7 @@ Background task definitions.
 
 import logging
 from datetime import datetime, timedelta
+import pytz
 
 from mochi_analytics.core.models import Conversation, AnalysisConfig
 from mochi_analytics.core.analyzer import analyze_conversations, analyze_conversations_simplified
@@ -119,10 +120,35 @@ def run_daily_updates_task(dry_run: bool = False, org_filter: str | None = None,
     for config in slack_configs:
         # Check schedule time unless force_send is True
         if not force_send:
-            # TODO: Implement timezone-aware schedule checking
-            # For now, when called by cron without force_send, we skip this check
-            # and send to all orgs (cron job should be configured to run at desired time)
-            pass
+            # Get org timezone and check if current hour matches schedule_time
+            from mochi_analytics.integrations import get_organization_by_id
+            org = get_organization_by_id(config.organization_id)
+
+            if org:
+                try:
+                    # Parse schedule time (HH:MM format)
+                    schedule_hour, schedule_minute = map(int, config.schedule_time.split(':'))
+
+                    # Get current time in org's timezone
+                    org_tz = pytz.timezone(org.timezone)
+                    current_time = datetime.now(org_tz)
+
+                    # Check if current hour matches (allow ±5 minute window)
+                    if current_time.hour != schedule_hour:
+                        logger.debug(f"Skipping {org.organization_name}: current hour {current_time.hour} != schedule hour {schedule_hour}")
+                        skipped += 1
+                        continue
+
+                    # Optional: check minute window
+                    minute_diff = abs(current_time.minute - schedule_minute)
+                    if minute_diff > 5:  # Allow 5-minute window
+                        logger.debug(f"Skipping {org.organization_name}: outside 5-minute window")
+                        skipped += 1
+                        continue
+
+                except Exception as e:
+                    logger.warning(f"Failed to parse schedule for {config.organization_id}: {e}, sending anyway")
+
         try:
             org_id = config.organization_id
 

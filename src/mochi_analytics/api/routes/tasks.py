@@ -18,14 +18,14 @@ async def run_daily_updates(request: TaskRequest) -> TaskResponse:
     """
     Run daily Slack update task.
 
-    Manual API calls will send immediately (force_send=True).
-    Automated cron calls should pass force_send=False to respect schedule times.
+    Set force_send=True for manual runs (send immediately, ignore schedule).
+    Set force_send=False for automated cron (respect each org's schedule_time).
     """
     try:
         result = run_daily_updates_task(
             dry_run=request.dry_run,
             org_filter=request.org_filter,
-            force_send=True  # Manual API calls always send immediately
+            force_send=request.force_send
         )
 
         return TaskResponse(
