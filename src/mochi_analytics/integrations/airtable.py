@@ -34,8 +34,8 @@ class SlackDailyConfig(BaseModel):
         description="Stage name to display label mapping from Analysis table (e.g., {'Won': 'closed'})"
     )
     schedule_time: str = Field(
-        default="12:00",
-        description="Time to send update in HH:MM format (org timezone)"
+        default="",
+        description="Time to send update in HH:MM format (org timezone). Empty string means manual-only (requires force_send=True)"
     )
     active: bool = Field(default=True, description="Whether Slack updates are enabled")
 
@@ -187,11 +187,11 @@ class AirtableClient:
             else:
                 logger.warning(f"Org {org_name}: no Analysis records linked")
 
-            # Skip if schedule_time is empty
+            # Get schedule_time (allow empty - will be skipped in automated runs unless force_send=True)
             schedule_time = fields.get("Schedule Time", "").strip()
             if not schedule_time:
-                logger.warning(f"Org {org_name}: skipping due to empty Schedule Time")
-                continue  # Skip orgs without a schedule time
+                logger.info(f"Org {org_name}: no Schedule Time set (will only run with force_send=True)")
+                schedule_time = ""  # Empty string indicates no schedule
 
             logger.info(f"Org {org_name}: adding config with {len(stage_labels)} stage labels")
             configs.append(

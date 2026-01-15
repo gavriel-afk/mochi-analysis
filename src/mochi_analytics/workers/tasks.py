@@ -120,6 +120,12 @@ def run_daily_updates_task(dry_run: bool = False, org_filter: str | None = None,
     for config in slack_configs:
         # Check schedule time unless force_send is True
         if not force_send:
+            # Skip orgs with no schedule_time in automated runs
+            if not config.schedule_time:
+                logger.debug(f"Skipping {config.organization_id}: no schedule_time set (use force_send=True to override)")
+                skipped += 1
+                continue
+
             # Get org timezone and check if current hour matches schedule_time
             from mochi_analytics.integrations import get_organization_by_id
             org = get_organization_by_id(config.organization_id)
