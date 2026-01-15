@@ -1,7 +1,7 @@
 databases:
   - name: mochi-analytics-db
     region: oregon
-    plan: starter
+    plan: free
     databaseName: mochi_analytics
     user: mochi_user
 
@@ -10,7 +10,7 @@ services:
   - type: web
     name: mochi-analytics-api
     region: oregon
-    plan: starter
+    plan: free
     runtime: python
     buildCommand: "pip install -r requirements/base.txt && pip install -e . && PYTHONPATH=src alembic upgrade head"
     startCommand: "uvicorn mochi_analytics.api.app:app --host 0.0.0.0 --port $PORT"
