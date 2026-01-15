@@ -34,6 +34,23 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
+def get_session() -> Session:
+    """
+    Get a database session for non-FastAPI code.
+
+    Caller is responsible for closing the session.
+
+    Usage:
+        session = get_session()
+        try:
+            # Use session
+            session.commit()
+        finally:
+            session.close()
+    """
+    return SessionLocal()
+
+
 def create_tables():
     """Create all tables defined in models."""
     from mochi_analytics.storage.models import Base
