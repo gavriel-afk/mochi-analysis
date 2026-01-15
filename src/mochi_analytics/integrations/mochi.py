@@ -28,7 +28,7 @@ class MochiConfig(BaseModel):
         default="https://api.themochi.app",
         description="Mochi API base URL"
     )
-    timeout: int = Field(default=120, description="Request timeout in seconds")
+    timeout: int = Field(default=300, description="Request timeout in seconds")
 
 
 class MochiClient:
