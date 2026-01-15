@@ -162,13 +162,18 @@ class AirtableClient:
             else:
                 stages = []
 
+            # Skip if schedule_time is empty
+            schedule_time = fields.get("Schedule Time", "").strip()
+            if not schedule_time:
+                continue  # Skip orgs without a schedule time
+
             configs.append(
                 SlackDailyConfig(
                     record_id=record["id"],
                     organization_id=org_id,
                     slack_channel=fields.get("Slack Channel", ""),
                     stages=stages,
-                    schedule_time=fields.get("Schedule Time", "12:00"),
+                    schedule_time=schedule_time,
                     active=fields.get("Active", False)
                 )
             )
