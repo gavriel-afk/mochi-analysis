@@ -205,7 +205,7 @@ def run_daily_updates_task(dry_run: bool = False, org_filter: str | None = None,
                     summary=result.summary.model_dump(),
                     setters=result.setters_by_sent_by if result.setters_by_sent_by else None,
                     date_range=str(yesterday_org_tz),
-                    configured_stages=config.stages
+                    stage_labels=config.stage_labels
                 )
                 logger.info(f"Sent daily digest for {org_id} to {config.slack_channel}")
                 updates_sent += 1

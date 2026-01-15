@@ -101,7 +101,7 @@ async def debug_slack_configs():
                     "record_id": c.record_id,
                     "organization_id": c.organization_id,
                     "slack_channel": c.slack_channel,
-                    "stages": c.stages,
+                    "stage_labels": c.stage_labels,
                     "schedule_time": c.schedule_time,
                     "active": c.active
                 }

@@ -26,9 +26,9 @@ class SlackDailyConfig(BaseModel):
     record_id: str = Field(..., description="Airtable record ID")
     organization_id: str = Field(..., description="Mochi org UUID from linked record")
     slack_channel: str = Field(..., description="Slack channel ID (e.g., C01234567)")
-    stages: list[str] = Field(
-        default_factory=list,
-        description="Stage types to report (e.g., ['NEW_LEAD', 'QUALIFIED'])"
+    stage_labels: dict[str, str] = Field(
+        default_factory=dict,
+        description="Stage name to display label mapping from Analysis table (e.g., {'Won': 'closed'})"
     )
     schedule_time: str = Field(
         default="12:00",
@@ -67,6 +67,7 @@ class AirtableClient:
         self.api = Api(config.api_key)
         self.orgs_table = self.api.table(config.base_id, "Mochi Organization")
         self.slack_table = self.api.table(config.base_id, "Slack Daily")
+        self.analysis_table = self.api.table(config.base_id, "Analysis")
 
     def get_organizations(self, active_only: bool = True) -> list[OrganizationConfig]:
         """
@@ -151,16 +152,28 @@ class AirtableClient:
             org_record = self.orgs_table.get(org_record_id)
             org_id = org_record["fields"].get("Organization ID", "")
 
-            # Parse stages (comma-separated string or list)
-            stages_field = fields.get("Stages", "")
-            if isinstance(stages_field, list):
-                # If Stages is a multi-select field, it comes as a list
-                stages = stages_field
-            elif isinstance(stages_field, str):
-                # If Stages is a text field, split by comma
-                stages = [s.strip() for s in stages_field.split(",") if s.strip()]
-            else:
-                stages = []
+            # Fetch linked Analysis records
+            analysis_links = fields.get("Analysis", [])
+            stage_labels = {}
+
+            if analysis_links:
+                for analysis_record_id in analysis_links:
+                    try:
+                        analysis_record = self.analysis_table.get(analysis_record_id)
+                        analysis_fields = analysis_record["fields"]
+
+                        # Filter: only Type="metrics"
+                        if analysis_fields.get("Type", "") != "metrics":
+                            continue
+
+                        stage_name = analysis_fields.get("Name", "")
+                        stage_label = analysis_fields.get("Label", "")
+
+                        if stage_name:
+                            # Use Label if provided, else use Name as-is (no transformation)
+                            stage_labels[stage_name] = stage_label if stage_label else stage_name
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch Analysis record {analysis_record_id}: {e}")
 
             # Skip if schedule_time is empty
             schedule_time = fields.get("Schedule Time", "").strip()
@@ -172,7 +185,7 @@ class AirtableClient:
                     record_id=record["id"],
                     organization_id=org_id,
                     slack_channel=fields.get("Slack Channel", ""),
-                    stages=stages,
+                    stage_labels=stage_labels,
                     schedule_time=schedule_time,
                     active=fields.get("Active", False)
                 )
