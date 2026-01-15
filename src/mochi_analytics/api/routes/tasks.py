@@ -84,3 +84,29 @@ async def run_auto_export(request: TaskRequest) -> TaskResponse:
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Task failed: {e}")
+
+
+@router.get("/tasks/slack-configs")
+async def debug_slack_configs():
+    """
+    Debug endpoint to see what Slack configurations are available.
+    """
+    try:
+        configs = get_slack_configs(active_only=False)  # Get all, not just active
+
+        return {
+            "total_configs": len(configs),
+            "configs": [
+                {
+                    "record_id": c.record_id,
+                    "organization_id": c.organization_id,
+                    "slack_channel": c.slack_channel,
+                    "stages": c.stages,
+                    "schedule_time": c.schedule_time,
+                    "active": c.active
+                }
+                for c in configs
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get Slack configs: {str(e)}")
