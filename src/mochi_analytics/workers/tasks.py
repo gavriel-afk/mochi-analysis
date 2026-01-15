@@ -176,16 +176,12 @@ def run_daily_updates_task(dry_run: bool = False, org_filter: str | None = None,
             conversations = [Conversation.model_validate(c) for c in conversations_data]
 
             # Run simplified analysis (no LLM features)
-            analysis_config = AnalysisConfig(
-                timezone="UTC",  # Will be converted in analysis
-                start_date=str(yesterday),
-                end_date=str(yesterday),
-                include_scripts=False,
-                include_objections=False,
-                include_avatars=False
+            result = analyze_conversations_simplified(
+                conversations,
+                timezone="UTC",
+                start_date=yesterday,
+                end_date=yesterday
             )
-
-            result = analyze_conversations_simplified(conversations, analysis_config)
 
             # Send Slack digest
             if not dry_run:
