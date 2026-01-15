@@ -76,7 +76,7 @@ def run_analysis_task(
     return result.model_dump()
 
 
-def run_daily_updates_task(dry_run: bool = False, org_filter: str | None = None) -> dict:
+def run_daily_updates_task(dry_run: bool = False, org_filter: str | None = None, force_send: bool = False) -> dict:
     """
     Run daily Slack updates for all configured organizations.
 
@@ -87,11 +87,12 @@ def run_daily_updates_task(dry_run: bool = False, org_filter: str | None = None)
     Args:
         dry_run: If True, don't actually send Slack messages
         org_filter: Optional organization name filter (case-insensitive substring match)
+        force_send: If True, ignore schedule_time and send immediately (for manual runs)
 
     Returns:
         Summary of updates sent
     """
-    logger.info("Running daily updates task")
+    logger.info(f"Running daily updates task (force_send={force_send})")
 
     # Get all active Slack configurations
     try:
@@ -102,6 +103,7 @@ def run_daily_updates_task(dry_run: bool = False, org_filter: str | None = None)
 
     updates_sent = 0
     errors = []
+    skipped = 0
 
     # Filter by organization name if specified
     if org_filter:
@@ -115,6 +117,12 @@ def run_daily_updates_task(dry_run: bool = False, org_filter: str | None = None)
         logger.info(f"Filtered to {len(slack_configs)} orgs matching '{org_filter}'")
 
     for config in slack_configs:
+        # Check schedule time unless force_send is True
+        if not force_send:
+            # TODO: Implement timezone-aware schedule checking
+            # For now, when called by cron without force_send, we skip this check
+            # and send to all orgs (cron job should be configured to run at desired time)
+            pass
         try:
             org_id = config.organization_id
 
@@ -182,5 +190,6 @@ def run_daily_updates_task(dry_run: bool = False, org_filter: str | None = None)
     return {
         "updates_sent": updates_sent,
         "total_configs": len(slack_configs),
+        "skipped": skipped,
         "errors": errors
     }
