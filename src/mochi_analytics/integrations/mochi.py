@@ -51,6 +51,7 @@ class MochiClient:
         self.client = httpx.Client(
             base_url=config.base_url,
             timeout=config.timeout,
+            follow_redirects=False,  # Don't follow redirects - 302 usually means expired session
             headers={
                 "Cookie": f"sessionid={config.session_id}"
             }
@@ -92,6 +93,14 @@ class MochiClient:
 
         try:
             response = self.client.get(endpoint, params=params)
+
+            # Check for redirect (expired session)
+            if response.status_code in (301, 302, 303, 307, 308):
+                raise MochiAPIError(
+                    f"Authentication failed (HTTP {response.status_code} redirect). "
+                    "MOCHI_SESSION_ID has expired. Please update the session ID in Render environment variables."
+                )
+
             response.raise_for_status()
 
             # Try to parse JSON, with auto-repair on failure
