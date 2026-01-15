@@ -99,15 +99,41 @@ class MochiClient:
                 data = response.json()
             except json.JSONDecodeError as json_err:
                 logger.warning(f"JSON parse error: {json_err}. Attempting auto-repair...")
-                try:
-                    # Use json_repair to fix malformed JSON
-                    repaired = repair_json(response.text)
-                    data = json.loads(repaired)
-                    logger.info("JSON auto-repair successful")
-                except Exception as repair_err:
-                    raise MochiAPIError(
-                        f"JSON parsing failed and auto-repair unsuccessful: {json_err}"
-                    ) from repair_err
+                text = response.text.rstrip()
+
+                # Quick fix: if it's a truncated array, try adding closing brackets
+                if text.startswith("[") and not text.endswith("]"):
+                    logger.info("Detected truncated JSON array, attempting bracket fix...")
+                    # Find last complete object by looking for "}," or "}" pattern
+                    # and add closing bracket
+                    last_brace = text.rfind("}")
+                    if last_brace > 0:
+                        fixed = text[:last_brace + 1] + "]"
+                        try:
+                            data = json.loads(fixed)
+                            logger.info("JSON bracket fix successful")
+                        except json.JSONDecodeError:
+                            # If simple fix didn't work, try json_repair
+                            try:
+                                repaired = repair_json(text)
+                                data = json.loads(repaired)
+                                logger.info("JSON auto-repair successful")
+                            except Exception as repair_err:
+                                raise MochiAPIError(
+                                    f"JSON parsing failed and auto-repair unsuccessful: {json_err}"
+                                ) from repair_err
+                    else:
+                        raise MochiAPIError(f"JSON parsing failed: {json_err}") from json_err
+                else:
+                    # Not a truncated array, try json_repair
+                    try:
+                        repaired = repair_json(text)
+                        data = json.loads(repaired)
+                        logger.info("JSON auto-repair successful")
+                    except Exception as repair_err:
+                        raise MochiAPIError(
+                            f"JSON parsing failed and auto-repair unsuccessful: {json_err}"
+                        ) from repair_err
 
             if not isinstance(data, list):
                 raise MochiAPIError(f"Expected list response, got {type(data)}")
