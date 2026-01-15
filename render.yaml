@@ -13,7 +13,7 @@ services:
     plan: free
     runtime: python
     buildCommand: "pip install -r requirements/base.txt && pip install -e . && alembic upgrade head"
-    startCommand: "uvicorn mochi_analytics.api.app:app --host 0.0.0.0 --port $PORT"
+    startCommand: "uvicorn mochi_analytics.api.app:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 300"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
