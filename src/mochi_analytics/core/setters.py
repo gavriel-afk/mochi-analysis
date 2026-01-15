@@ -4,7 +4,7 @@ from typing import List, Dict
 from collections import Counter, defaultdict
 from mochi_analytics.core.models import Conversation, SetterMetrics
 from mochi_analytics.core.metrics import parse_timestamp, calculate_time_difference_seconds
-from mochi_analytics.core.constants import TIME_BINS
+from mochi_analytics.core.constants import TIME_BINS, STAGE_TYPES
 import statistics
 
 
@@ -15,17 +15,20 @@ def analyze_setters_by_sender(conversations: List[Conversation]) -> Dict[str, Se
     Each message is attributed to the person who sent it.
     Shows individual message-sending performance.
     """
-    setter_data = defaultdict(lambda: {
-        'conversations': set(),
-        'messages_sent': 0,
-        'creator_messages_with_reply': 0,
-        'total_creator_messages': 0,
-        'reply_delays': [],
-        'stage_changes': Counter(),
-        'setter_activity': Counter(),
-        'lead_activity': Counter(),
-        'delayed_responses': Counter()
-    })
+    def create_setter_data():
+        return {
+            'conversations': set(),
+            'messages_sent': 0,
+            'creator_messages_with_reply': 0,
+            'total_creator_messages': 0,
+            'reply_delays': [],
+            'stage_changes': {stage: 0 for stage in STAGE_TYPES},
+            'setter_activity': {bin: 0 for bin in TIME_BINS},
+            'lead_activity': {bin: 0 for bin in TIME_BINS},
+            'delayed_responses': {bin: 0 for bin in TIME_BINS}
+        }
+
+    setter_data = defaultdict(create_setter_data)
 
     for conv in conversations:
         # Track stage for each setter involved
@@ -36,8 +39,10 @@ def analyze_setters_by_sender(conversations: List[Conversation]) -> Dict[str, Se
 
         for i, msg in enumerate(messages):
             if msg.sender == "CREATOR":
-                # Attribute to sender (could extract from msg if available, or use setter_email)
-                setter = conv.setter_email  # Default to conversation owner
+                # Attribute to sender - only use sent_by field (no fallback)
+                setter = msg.sent_by
+                if not setter:
+                    continue  # Skip messages without sent_by
                 setters_in_conv.add(setter)
 
                 data = setter_data[setter]
@@ -48,7 +53,7 @@ def analyze_setters_by_sender(conversations: List[Conversation]) -> Dict[str, Se
                 # Time bin
                 msg_time = parse_timestamp(msg.timestamp)
                 time_bin = get_time_bin(msg_time.hour)
-                data['setter_activity'][time_bin] += 1
+                data['setter_activity'][time_bin] = data['setter_activity'].get(time_bin, 0) + 1
 
                 # Check for reply
                 reply_found = False
@@ -71,12 +76,12 @@ def analyze_setters_by_sender(conversations: List[Conversation]) -> Dict[str, Se
                 time_bin = get_time_bin(msg_time.hour)
 
                 for setter in setters_in_conv:
-                    setter_data[setter]['lead_activity'][time_bin] += 1
+                    setter_data[setter]['lead_activity'][time_bin] = setter_data[setter]['lead_activity'].get(time_bin, 0) + 1
 
         # Add stage changes for all setters involved
         if conv.stage:
             for setter in setters_in_conv:
-                setter_data[setter]['stage_changes'][conv.stage] += 1
+                setter_data[setter]['stage_changes'][conv.stage] = setter_data[setter]['stage_changes'].get(conv.stage, 0) + 1
 
     # Convert to SetterMetrics
     result = {}
@@ -94,10 +99,10 @@ def analyze_setters_by_sender(conversations: List[Conversation]) -> Dict[str, Se
             creator_messages_with_reply_within_48h=data['creator_messages_with_reply'],
             creator_message_reply_rate_within_48h=round(reply_rate, 2),
             median_reply_delay_seconds=median_delay,
-            stage_changes=dict(data['stage_changes']),
-            setter_activity_by_time=dict(data['setter_activity']),
-            lead_activity_by_time=dict(data['lead_activity']),
-            delayed_responses_by_time=dict(data['delayed_responses'])
+            stage_changes=data['stage_changes'],
+            setter_activity_by_time=data['setter_activity'],
+            lead_activity_by_time=data['lead_activity'],
+            delayed_responses_by_time=data['delayed_responses']
         )
 
     return result
@@ -110,17 +115,20 @@ def analyze_setters_by_assignment(conversations: List[Conversation]) -> Dict[str
     Entire conversation is attributed to assigned setter (setter_email).
     Shows overall conversation ownership.
     """
-    setter_data = defaultdict(lambda: {
-        'conversations': set(),
-        'messages_sent': 0,
-        'creator_messages_with_reply': 0,
-        'total_creator_messages': 0,
-        'reply_delays': [],
-        'stage_changes': Counter(),
-        'setter_activity': Counter(),
-        'lead_activity': Counter(),
-        'delayed_responses': Counter()
-    })
+    def create_setter_data():
+        return {
+            'conversations': set(),
+            'messages_sent': 0,
+            'creator_messages_with_reply': 0,
+            'total_creator_messages': 0,
+            'reply_delays': [],
+            'stage_changes': {stage: 0 for stage in STAGE_TYPES},
+            'setter_activity': {bin: 0 for bin in TIME_BINS},
+            'lead_activity': {bin: 0 for bin in TIME_BINS},
+            'delayed_responses': {bin: 0 for bin in TIME_BINS}
+        }
+
+    setter_data = defaultdict(create_setter_data)
 
     for conv in conversations:
         setter = conv.setter_email
@@ -131,7 +139,7 @@ def analyze_setters_by_assignment(conversations: List[Conversation]) -> Dict[str
 
         # Add stage
         if conv.stage:
-            data['stage_changes'][conv.stage] += 1
+            data['stage_changes'][conv.stage] = data['stage_changes'].get(conv.stage, 0) + 1
 
         # Get actual messages (filter out status changes)
         messages = conv.get_actual_messages()
@@ -145,7 +153,7 @@ def analyze_setters_by_assignment(conversations: List[Conversation]) -> Dict[str
                 # Time bin
                 msg_time = parse_timestamp(msg.timestamp)
                 time_bin = get_time_bin(msg_time.hour)
-                data['setter_activity'][time_bin] += 1
+                data['setter_activity'][time_bin] = data['setter_activity'].get(time_bin, 0) + 1
 
                 # Check for reply
                 reply_found = False
@@ -166,7 +174,7 @@ def analyze_setters_by_assignment(conversations: List[Conversation]) -> Dict[str
                 # Track lead activity
                 msg_time = parse_timestamp(msg.timestamp)
                 time_bin = get_time_bin(msg_time.hour)
-                data['lead_activity'][time_bin] += 1
+                data['lead_activity'][time_bin] = data['lead_activity'].get(time_bin, 0) + 1
 
     # Convert to SetterMetrics
     result = {}
@@ -184,10 +192,10 @@ def analyze_setters_by_assignment(conversations: List[Conversation]) -> Dict[str
             creator_messages_with_reply_within_48h=data['creator_messages_with_reply'],
             creator_message_reply_rate_within_48h=round(reply_rate, 2),
             median_reply_delay_seconds=median_delay,
-            stage_changes=dict(data['stage_changes']),
-            setter_activity_by_time=dict(data['setter_activity']),
-            lead_activity_by_time=dict(data['lead_activity']),
-            delayed_responses_by_time=dict(data['delayed_responses'])
+            stage_changes=data['stage_changes'],
+            setter_activity_by_time=data['setter_activity'],
+            lead_activity_by_time=data['lead_activity'],
+            delayed_responses_by_time=data['delayed_responses']
         )
 
     return result

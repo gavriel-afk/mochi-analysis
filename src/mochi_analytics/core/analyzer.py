@@ -14,6 +14,15 @@ from mochi_analytics.core.setters import (
 )
 from mochi_analytics.core.time_series import analyze_time_series
 
+# LLM features imported conditionally
+try:
+    from mochi_analytics.core.scripts import analyze_scripts
+    from mochi_analytics.core.objections import analyze_objections
+    from mochi_analytics.core.avatars import analyze_avatars
+    HAS_LLM = True
+except ImportError:
+    HAS_LLM = False
+
 
 def analyze_conversations(
     conversations: List[Conversation],
@@ -60,10 +69,32 @@ def analyze_conversations(
         k: v.model_dump() for k, v in setters_by_assignment.items()
     }
 
+    # LLM features (optional based on config and availability)
+    scripts_result = None
+    if config.include_scripts and HAS_LLM:
+        scripts_result = analyze_scripts(
+            conversations,
+            similarity_threshold=config.similarity_threshold
+        )
+    elif config.include_scripts and not HAS_LLM:
+        print("Warning: Scripts analysis requested but LLM dependencies not installed")
+
+    objections_result = None
+    if config.include_objections and HAS_LLM:
+        objections_result = analyze_objections(conversations)
+    elif config.include_objections and not HAS_LLM:
+        print("Warning: Objections analysis requested but LLM dependencies not installed")
+
+    avatars_result = None
+    if config.include_avatars and HAS_LLM:
+        avatars_result = analyze_avatars(conversations)
+    elif config.include_avatars and not HAS_LLM:
+        print("Warning: Avatars analysis requested but LLM dependencies not installed")
+
     # Build metadata
     metadata = {
         "organization_id": conversations[0].organization if conversations else None,
-        "organization_name": "Unknown",  # Will be filled by caller
+        "organization_name": conversations[0].organization_name if conversations else "Unknown",
         "timezone": config.timezone,
         "analysis_period": {
             "start": start_date.isoformat() if isinstance(start_date, date) else start_date,
@@ -84,9 +115,9 @@ def analyze_conversations(
         time_series=time_series,
         setters_by_sent_by=setters_by_sender_dict,
         setters_by_assignment=setters_by_assignment_dict,
-        scripts=None,  # Will be added in Phase 3 (LLM features)
-        objections=None,  # Will be added in Phase 3
-        avatars=None  # Will be added in Phase 3
+        scripts=scripts_result,
+        objections=objections_result,
+        avatars=avatars_result
     )
 
     return result
@@ -164,7 +195,7 @@ def analyze_conversations_simplified(
     # Build metadata
     metadata = {
         "organization_id": conversations[0].organization if conversations else None,
-        "organization_name": "Unknown",
+        "organization_name": conversations[0].organization_name if conversations else "Unknown",
         "timezone": timezone,
         "analysis_period": {
             "start": start_date.isoformat(),

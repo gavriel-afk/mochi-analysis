@@ -1,0 +1,206 @@
+# Chart configuration for Plotly PNG generation
+# All charts follow the same styling for consistency
+
+[global]
+width = 1400
+height = 700
+scale = 2  # High DPI for sharp images
+background_color = "#0e1117"  # Dark theme
+text_color = "#FFFFFF"
+font_size = 14
+title_font_size = 24
+legend_font_size = 12
+show_grid = true
+grid_color = "#2d2d2d"
+
+# Chart 1: New Leads
+[[charts]]
+id = "new_leads"
+filename = "01_new_leads.png"
+title = "New Leads"
+
+[[charts.lines]]
+stage = "NEW_LEAD"
+label = "New Leads"
+line_color = "#D579FC"
+line_width = 4
+marker_shape = "circle"
+marker_size = 35
+marker_fill = "#FFFFFF"
+marker_border_color = "#D579FC"
+marker_border_width = 4
+
+# Chart 2: In Contact
+[[charts]]
+id = "in_contact"
+filename = "02_in_contact.png"
+title = "In Contact"
+
+[[charts.lines]]
+stage = "IN_CONTACT"
+label = "In Contact"
+line_color = "#4ECDC4"
+line_width = 4
+marker_shape = "circle"
+marker_size = 35
+marker_fill = "#FFFFFF"
+marker_border_color = "#4ECDC4"
+marker_border_width = 4
+
+# Chart 3: Funnel Overview (New Leads, Qualified, Booked Calls)
+[[charts]]
+id = "funnel_overview"
+filename = "03_funnel_overview.png"
+title = "New Leads, Qualified & Booked Calls"
+
+[[charts.lines]]
+stage = "NEW_LEAD"
+label = "New Leads"
+line_color = "#D579FC"
+line_width = 4
+marker_shape = "circle"
+marker_size = 35
+marker_fill = "#FFFFFF"
+marker_border_color = "#D579FC"
+marker_border_width = 4
+
+[[charts.lines]]
+stage = "QUALIFIED"
+label = "Qualified"
+line_color = "#FFD700"
+line_width = 4
+marker_shape = "diamond"
+marker_size = 35
+marker_fill = "#FFFFFF"
+marker_border_color = "#FFD700"
+marker_border_width = 4
+
+[[charts.lines]]
+stage = "BOOKED_CALL"
+label = "Booked Calls"
+line_color = "#50C878"
+line_width = 4
+marker_shape = "square"
+marker_size = 35
+marker_fill = "#FFFFFF"
+marker_border_color = "#50C878"
+marker_border_width = 4
+
+# Chart 4: Qualified Leads
+[[charts]]
+id = "qualified"
+filename = "04_qualified.png"
+title = "Qualified Leads"
+
+[[charts.lines]]
+stage = "QUALIFIED"
+label = "Qualified"
+line_color = "#FFD700"
+line_width = 4
+marker_shape = "diamond"
+marker_size = 35
+marker_fill = "#FFFFFF"
+marker_border_color = "#FFD700"
+marker_border_width = 4
+
+# Chart 5: Unqualified Leads
+[[charts]]
+id = "unqualified"
+filename = "05_unqualified.png"
+title = "Unqualified Leads"
+
+[[charts.lines]]
+stage = "UNQUALIFIED"
+label = "Unqualified"
+line_color = "#FF6B6B"
+line_width = 4
+marker_shape = "x"
+marker_size = 35
+marker_fill = "#FF6B6B"
+marker_border_color = "#FF6B6B"
+marker_border_width = 4
+
+# Chart 6: Booked Calls
+[[charts]]
+id = "booked_calls"
+filename = "06_booked_calls.png"
+title = "Booked Calls"
+
+[[charts.lines]]
+stage = "BOOKED_CALL"
+label = "Booked Calls"
+line_color = "#50C878"
+line_width = 4
+marker_shape = "square"
+marker_size = 35
+marker_fill = "#FFFFFF"
+marker_border_color = "#50C878"
+marker_border_width = 4
+
+# Chart 7: Deposits
+[[charts]]
+id = "deposits"
+filename = "07_deposits.png"
+title = "Deposits"
+
+[[charts.lines]]
+stage = "DEPOSIT"
+label = "Deposits"
+line_color = "#00CED1"
+line_width = 4
+marker_shape = "star"
+marker_size = 35
+marker_fill = "#FFFFFF"
+marker_border_color = "#00CED1"
+marker_border_width = 4
+
+# Chart 8: Won Deals
+[[charts]]
+id = "won"
+filename = "08_won.png"
+title = "Won Deals"
+
+[[charts.lines]]
+stage = "WON"
+label = "Won"
+line_color = "#32CD32"
+line_width = 4
+marker_shape = "star"
+marker_size = 35
+marker_fill = "#FFFFFF"
+marker_border_color = "#32CD32"
+marker_border_width = 4
+
+# Chart 9: Lost Deals
+[[charts]]
+id = "lost"
+filename = "09_lost.png"
+title = "Lost Deals"
+
+[[charts.lines]]
+stage = "LOST"
+label = "Lost"
+line_color = "#DC143C"
+line_width = 4
+marker_shape = "x"
+marker_size = 35
+marker_fill = "#DC143C"
+marker_border_color = "#DC143C"
+marker_border_width = 4
+
+# Chart 10: No Shows
+[[charts]]
+id = "no_show"
+filename = "10_no_show.png"
+title = "No Shows"
+
+[[charts.lines]]
+stage = "NO_SHOW"
+label = "No Show"
+line_color = "#FFA500"
+line_width = 4
+marker_shape = "x"
+marker_size = 35
+marker_fill = "#FFA500"
+marker_border_color = "#FFA500"
+marker_border_width = 4

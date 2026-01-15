@@ -7,10 +7,133 @@ Modern analytics platform for Mochi conversation data with FastAPI backend, Post
 - **6 Analysis Features**: Core metrics, setter analysis, time series, script clustering, objection classification, avatar clustering
 - **4 Export Formats**: JSON, CSV (Framer CMS), PNG charts, Slack Block Kit
 - **External Integrations**: Mochi API, Airtable, Slack, Framer CMS, Google Gemini
-- **Database-First Storage**: PostgreSQL (solves Render ephemeral filesystem issue)
-- **Daily Slack Digests**: Timezone-aware automated reporting
-- **REST API**: FastAPI with async job processing
-- **CLI Tool**: Command-line interface for local operations
+- **REST API**: FastAPI with 20+ endpoints
+- **Database Storage**: PostgreSQL/SQLite with SQLAlchemy
+
+---
+
+## Quick Start
+
+### 1. Install
+
+```bash
+cd mochi-analytics
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements/base.txt
+pip install -e .
+```
+
+### 2. Configure
+
+```bash
+cp .env.example .env
+# Edit .env with your API keys
+```
+
+Required environment variables:
+- `MOCHI_SESSION_ID` - Django session cookie
+- `GOOGLE_API_KEY` - For LLM features
+- `AIRTABLE_API_KEY` - Organization configs
+- `AIRTABLE_BASE_ID` - Airtable base
+- `SLACK_BOT_TOKEN` - Slack notifications
+- `FRAMER_API_URL` - Framer CMS endpoint
+
+### 3. Start Server
+
+```bash
+uvicorn mochi_analytics.api:app --reload --port 8000
+```
+
+Visit: **http://localhost:8000/docs**
+
+---
+
+## API Usage
+
+### Health Check
+
+```bash
+curl http://localhost:8000/health
+```
+
+### List Organizations
+
+```bash
+curl http://localhost:8000/api/v1/organizations
+```
+
+### Submit Analysis
+
+```bash
+curl -X POST http://localhost:8000/api/v1/analysis \
+  -H "Content-Type: application/json" \
+  -d '{
+    "conversations": [...],
+    "config": {
+      "timezone": "UTC",
+      "start_date": "2025-01-01",
+      "end_date": "2025-01-07"
+    }
+  }'
+```
+
+### Get Results
+
+```bash
+curl http://localhost:8000/api/v1/analysis/{job_id}
+```
+
+### Export Formats
+
+```bash
+# JSON
+curl http://localhost:8000/api/v1/exports/{job_id}/json -o report.json
+
+# CSV (Framer CMS)
+curl http://localhost:8000/api/v1/exports/{job_id}/csv -o import.csv
+
+# Complete bundle (JSON + CSV + charts)
+curl http://localhost:8000/api/v1/exports/{job_id}/zip -o bundle.zip
+
+# Individual chart
+curl http://localhost:8000/api/v1/exports/{job_id}/charts/01_new_leads.png -o chart.png
+```
+
+---
+
+## API Endpoints
+
+**Analysis**
+- `POST /api/v1/analysis` - Submit job
+- `GET /api/v1/analysis/{job_id}` - Get status
+
+**Jobs**
+- `GET /api/v1/jobs` - List all jobs
+- `GET /api/v1/jobs/{job_id}` - Get job details
+- `POST /api/v1/jobs/{job_id}/retry` - Retry failed job
+
+**Exports**
+- `GET /api/v1/exports/{job_id}/json` - JSON export
+- `GET /api/v1/exports/{job_id}/csv` - CSV export
+- `GET /api/v1/exports/{job_id}/zip` - ZIP bundle
+- `GET /api/v1/exports/{job_id}/charts/{chart_id}.png` - Chart image
+
+**Organizations**
+- `GET /api/v1/organizations` - List orgs
+- `GET /api/v1/organizations/{org_id}` - Get org
+- `POST /api/v1/organizations/{org_id}/analyze` - Analyze org
+
+**Reports**
+- `POST /api/v1/reports` - Create report
+- `GET /api/v1/reports` - List reports
+- `GET /api/v1/reports/{slug}` - Get report
+
+**Tasks**
+- `POST /api/v1/tasks/daily-updates` - Run daily Slack digests
+- `POST /api/v1/tasks/auto-export` - Run auto-export
+
+---
 
 ## Project Structure
 
@@ -20,175 +143,59 @@ mochi-analytics/
 │   ├── core/              # Analysis engine
 │   ├── storage/           # Database models
 │   ├── api/               # FastAPI server
-│   ├── workers/           # Background jobs
 │   ├── exporters/         # Export formats
-│   ├── integrations/      # External APIs
-│   └── cli/               # CLI tool
+│   └── integrations/      # External APIs
 ├── config/                # Configuration files
-├── tests/                 # Test suite
 ├── requirements/          # Dependencies
 └── alembic/              # Database migrations
 ```
 
-## Setup
+---
 
-### Prerequisites
+## Analysis Features
 
-- Python 3.11+
-- PostgreSQL (or SQLite for local development)
-- Git
+1. **Core Metrics** - Conversations, messages, reply rates, stage changes
+2. **Setter Analysis** - Per-setter performance (by sender, by assignment)
+3. **Time Series** - Daily stage changes, activity by time of day
+4. **Script Analysis** - Fuzzy matching + Gemini categorization
+5. **Objection Classification** - Gemini batch classification (7 categories)
+6. **Avatar Clustering** - Gemini embeddings + K-means (5 personas)
 
-### Installation
+---
 
-1. Clone the repository:
-```bash
-git clone <repo-url>
-cd mochi-analytics
-```
+## Database
 
-2. Create virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies:
-```bash
-pip install -r requirements/dev.txt
-```
-
-4. Configure environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your API keys and credentials
-```
-
-5. Initialize database:
-```bash
-alembic upgrade head
-```
-
-## Usage
-
-### CLI Commands
-
-```bash
-# Run analysis
-python -m mochi_analytics.cli analyze \
-  --org-id <org-uuid> \
-  --date-from 2025-01-01 \
-  --date-to 2025-01-07 \
-  --output analysis.json
-
-# Start API server
-python -m mochi_analytics.cli serve --port 8000
-
-# Run background worker
-python -m mochi_analytics.cli worker
-
-# Run daily updates scheduler
-python -m mochi_analytics.cli daily-updates
-```
-
-### API Endpoints
-
-```bash
-# Health check
-GET /health
-
-# Submit analysis job
-POST /api/v1/analysis
-Body: {conversations: [...], config: {...}}
-
-# Get job status
-GET /api/v1/analysis/{job_id}
-
-# Export results
-GET /api/v1/exports/{job_id}/json
-GET /api/v1/exports/{job_id}/csv
-GET /api/v1/exports/{job_id}/zip
-GET /api/v1/exports/{job_id}/charts/{chart_id}.png
-```
-
-## Development
-
-### Running Tests
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=src/mochi_analytics --cov-report=html
-
-# Run specific test file
-pytest tests/unit/test_metrics.py -v
-```
-
-### Code Quality
-
-```bash
-# Linting
-ruff check src/
-
-# Type checking
-mypy src/
-
-# Format code
-ruff format src/
-```
-
-## Deployment
-
-### Render Configuration
-
-The project includes `render.yaml` for easy deployment to Render:
-
-- **Web Service**: FastAPI server
-- **Worker Service**: Background job processing
-- **Cron Service**: Daily Slack updates (runs hourly)
-- **PostgreSQL Database**: Data persistence
-
-### Environment Variables
-
-Set these in Render dashboard:
-- `MOCHI_SESSION_ID`
-- `GOOGLE_API_KEY`
-- `AIRTABLE_API_KEY`
-- `AIRTABLE_BASE_ID`
-- `SLACK_BOT_TOKEN`
-- `FRAMER_API_URL`
-
-## Architecture
-
-### Database-First Storage
-
-All data stored in PostgreSQL (no ephemeral filesystem):
+The system uses database-first storage (no ephemeral filesystem):
 - Analysis results → JSONB field
 - Chart PNGs → Base64 TEXT field
 - Reports → JSONB field
 - Avatar clusters → JSONB + relational fields
 
-### Daily Slack Digest
+**Initialize database:**
+```bash
+alembic upgrade head
+```
 
-- Cron runs every hour
-- Checks which orgs are due based on timezone + schedule_time
-- Runs simplified analysis (core metrics + setters only)
-- Sends Block Kit message to configured Slack channel
+---
 
-### Analysis Features
+## Deployment
 
-1. **Core Metrics**: Conversations, messages, reply rates, stage changes
-2. **Setter Analysis**: Per-setter performance (2 modes: by sender, by assignment)
-3. **Time Series**: Daily stage changes, activity by time of day (8 bins)
-4. **Script Analysis**: RapidFuzz clustering + Gemini categorization
-5. **Objection Classification**: Gemini batch classification (7 categories)
-6. **Avatar Clustering**: Gemini embeddings + K-means (5 personas)
+### Render Configuration
 
-## License
+The project is designed for deployment on Render:
+- **Web Service**: FastAPI server
+- **Worker Service**: Background job processing
+- **Cron Service**: Daily Slack updates
+- **PostgreSQL Database**: Data persistence
 
-Proprietary - All rights reserved
+Set environment variables in Render dashboard.
+
+---
 
 ## Support
 
 For issues and questions, contact the Mochi team.
+
+## License
+
+Proprietary - All rights reserved

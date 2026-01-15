@@ -6,6 +6,7 @@ from collections import Counter, defaultdict
 from mochi_analytics.core.models import Conversation, TimeSeries, DayStages
 from mochi_analytics.core.metrics import parse_timestamp
 from mochi_analytics.core.setters import get_time_bin
+from mochi_analytics.core.constants import STAGE_TYPES
 import pytz
 
 
@@ -25,9 +26,12 @@ def analyze_time_series(
 
     # Initialize data structures
     daily_stages = defaultdict(Counter)
-    lead_activity = Counter()
-    setter_activity = Counter()
-    delayed_responses = Counter()
+
+    # Initialize all time bins with 0
+    all_time_bins = ["00_03", "03_06", "06_09", "09_12", "12_15", "15_18", "18_21", "21_24"]
+    lead_activity = {bin: 0 for bin in all_time_bins}
+    setter_activity = {bin: 0 for bin in all_time_bins}
+    delayed_responses = {bin: 0 for bin in all_time_bins}
 
     # Process conversations
     for conv in conversations:
@@ -55,9 +59,9 @@ def analyze_time_series(
             time_bin = get_time_bin(msg_time_local.hour)
 
             if msg.sender == "LEAD":
-                lead_activity[time_bin] += 1
+                lead_activity[time_bin] = lead_activity.get(time_bin, 0) + 1
             elif msg.sender == "CREATOR":
-                setter_activity[time_bin] += 1
+                setter_activity[time_bin] = setter_activity.get(time_bin, 0) + 1
 
                 # Check for delayed response (> 24h before creator replied)
                 if i > 0:
@@ -69,7 +73,7 @@ def analyze_time_series(
 
                         delay = (msg_time - prev_time).total_seconds()
                         if delay > 24 * 3600:  # More than 24 hours
-                            delayed_responses[time_bin] += 1
+                            delayed_responses[time_bin] = delayed_responses.get(time_bin, 0) + 1
 
     # Build day-by-day breakdown
     stage_changes_by_day = []
@@ -83,8 +87,14 @@ def analyze_time_series(
         date_str = current_date.strftime("%a, %d %b %y")  # "Mon, 01 Jan 24"
         date_iso = current_date.isoformat()  # "2024-01-01"
 
-        # Get stages for this day
-        stages = dict(daily_stages.get(current_date, {}))
+        # Initialize all stages with 0
+        stages = {stage: 0 for stage in STAGE_TYPES}
+
+        # Update with actual counts for this day
+        day_stages = daily_stages.get(current_date, {})
+        for stage, count in day_stages.items():
+            if stage in stages:
+                stages[stage] = count
 
         stage_changes_by_day.append(DayStages(
             date=date_str,
@@ -96,7 +106,7 @@ def analyze_time_series(
 
     return TimeSeries(
         stage_changes_by_day=stage_changes_by_day,
-        lead_activity_by_time=dict(lead_activity),
-        setter_activity_by_time=dict(setter_activity),
-        delayed_responses_by_time=dict(delayed_responses)
+        lead_activity_by_time=lead_activity,
+        setter_activity_by_time=setter_activity,
+        delayed_responses_by_time=delayed_responses
     )

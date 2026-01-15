@@ -1,0 +1,48 @@
+# Framer CMS Export Templates
+
+[title]
+template = "<h2>{org_name} | {start_date} - {end_date}</h2>"
+
+[description]
+template = "<blockquote><p>This report gives you a clear look at what actually happened in your pipeline this week. From how many new leads came in, to how well your team responded, to what messages worked best - it's all here. Use these insights to understand what's driving results and where to focus next.</p></blockquote>"
+
+[total_inbound]
+heading = "Total Inbound"
+text = "Last week there was <strong>{value}</strong> total new leads."
+
+[total_qualified]
+heading = "Total Qualified"
+text = "Last week there was <strong>{value}</strong> qualified leads."
+
+[total_booked]
+heading = "Total Booked Calls"
+text = "Last week there was <strong>{value}</strong> booked calls."
+
+[booking_rate]
+heading = "Booking Rate is {value}%"
+text = "Based on Booked Calls ({booked}) / New Leads ({leads})."
+
+[reply_rate]
+heading = "Reply Rate (48h)"
+text = "Your team's 48-hour reply rate was <strong>{value}%</strong>."
+
+[median_reply_time]
+heading = "Median Reply Time"
+text = "Median time to reply: <strong>{value}</strong>."
+
+[time_bins]
+"00_03" = "00:00 - 03:00"
+"03_06" = "03:00 - 06:00"
+"06_09" = "06:00 - 09:00"
+"09_12" = "09:00 - 12:00"
+"12_15" = "12:00 - 15:00"
+"15_18" = "15:00 - 18:00"
+"18_21" = "18:00 - 21:00"
+"21_24" = "21:00 - 00:00"
+
+[static_images]
+hero = "https://framerusercontent.com/images/mw2KqIAXRjGaqRXkQ65qnNer0.png"
+business_overview_cover = "https://framerusercontent.com/images/9gqJv4h4HeHzRaoaCoqgZ9tjZU.png"
+setter_performance_cover = "https://framerusercontent.com/images/1rFyLCMrvAiYjWVJmIXCcaz4.png"
+script_analysis_cover = "https://framerusercontent.com/images/0Tj9RgCKt4fYievqyIUK7fe8iMM.png"
+lead_analytics_cover = "https://framerusercontent.com/images/nz7y16uyMEwqQ9PwKbTeqmM5eQ.png"

@@ -27,17 +27,17 @@ def calculate_core_metrics(conversations: List[Conversation]) -> Summary:
     total_creator_messages = 0
     reply_delays = []
 
-    # Stage changes
-    stage_changes = Counter()
+    # Stage changes - initialize all stages with 0
+    stage_changes = {stage: 0 for stage in STAGE_TYPES}
 
-    # Media breakdown
+    # Media breakdown - initialize all media types with 0
     media_count = 0
-    media_by_type = Counter()
+    media_by_type = {media_type: 0 for media_type in MEDIA_TYPES}
 
     for conv in conversations:
         # Count stage
         if conv.stage:
-            stage_changes[conv.stage] += 1
+            stage_changes[conv.stage] = stage_changes.get(conv.stage, 0) + 1
 
         # Get actual messages (filter out status changes)
         messages = conv.get_actual_messages()
@@ -76,9 +76,9 @@ def calculate_core_metrics(conversations: List[Conversation]) -> Summary:
                     media_count += 1
                     media_type = media_item.get('type', 'other')
                     if media_type in MEDIA_TYPES:
-                        media_by_type[media_type] += 1
+                        media_by_type[media_type] = media_by_type.get(media_type, 0) + 1
                     else:
-                        media_by_type['other'] += 1
+                        media_by_type['other'] = media_by_type.get('other', 0) + 1
 
     # Calculate reply rate
     reply_rate = (
@@ -92,7 +92,7 @@ def calculate_core_metrics(conversations: List[Conversation]) -> Summary:
     # Build media breakdown
     media_breakdown = MediaBreakdown(
         total=media_count,
-        by_type=dict(media_by_type)
+        by_type=media_by_type
     )
 
     return Summary(
@@ -103,7 +103,7 @@ def calculate_core_metrics(conversations: List[Conversation]) -> Summary:
         creator_messages_with_reply_within_48h=creator_messages_with_reply,
         creator_message_reply_rate_within_48h=round(reply_rate, 2),
         median_reply_delay_seconds=median_delay,
-        stage_changes=dict(stage_changes),
+        stage_changes=stage_changes,
         media=media_breakdown
     )
 
