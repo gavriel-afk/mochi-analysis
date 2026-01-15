@@ -195,7 +195,8 @@ def run_daily_updates_task(dry_run: bool = False, org_filter: str | None = None,
                         instagram_handle=org.instagram_username,
                         summary=result.summary.model_dump(),
                         setters=result.setters_by_sent_by if result.setters_by_sent_by else None,
-                        date_range=str(yesterday)
+                        date_range=str(yesterday),
+                        configured_stages=config.stages
                     )
                     logger.info(f"Sent daily digest for {org_id} to {config.slack_channel}")
                     updates_sent += 1

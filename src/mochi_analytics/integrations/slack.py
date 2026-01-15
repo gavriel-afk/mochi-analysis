@@ -111,7 +111,8 @@ class SlackClient:
         instagram_handle: str | None,
         summary: dict[str, Any],
         setters: dict[str, Any] | None = None,
-        date_range: str | None = None
+        date_range: str | None = None,
+        configured_stages: list[str] | None = None
     ) -> dict[str, Any]:
         """
         Send a formatted daily digest message.
@@ -123,6 +124,7 @@ class SlackClient:
             summary: Analysis summary with metrics
             setters: Setter analysis data (optional)
             date_range: Date range string (e.g., "Jan 8 - Jan 14")
+            configured_stages: List of stages to display (from Airtable config)
 
         Returns:
             API response
@@ -204,7 +206,25 @@ class SlackClient:
 
                 # Add stage breakdown in 2-column format
                 setter_stages = metrics.get('stage_changes', {}) if isinstance(metrics, dict) else {}
-                if setter_stages:
+
+                # If we have configured stages, show all of them (even if 0)
+                # Otherwise, show only stages with count > 0
+                if configured_stages:
+                    fields = []
+                    for stage in configured_stages:
+                        count = setter_stages.get(stage, 0)
+                        stage_name = stage.replace('_', ' ').title()
+                        fields.append({
+                            "type": "mrkdwn",
+                            "text": f"*{stage_name}:* {count}"
+                        })
+
+                    if fields:
+                        blocks.append({
+                            "type": "section",
+                            "fields": fields[:10]  # Slack max 10 fields
+                        })
+                elif setter_stages:
                     fields = []
                     for stage, count in sorted(setter_stages.items()):
                         if count > 0:
@@ -245,7 +265,8 @@ def send_daily_digest(
     summary: dict[str, Any],
     setters: dict[str, Any] | None = None,
     date_range: str | None = None,
-    bot_token: str | None = None
+    bot_token: str | None = None,
+    configured_stages: list[str] | None = None
 ) -> dict[str, Any]:
     """
     Send daily digest message (convenience function).
@@ -258,6 +279,7 @@ def send_daily_digest(
         setters: Setter analysis (optional)
         date_range: Date range string (optional)
         bot_token: Bot token (uses env var if not provided)
+        configured_stages: List of stages to display (from Airtable config)
 
     Returns:
         API response
@@ -273,5 +295,6 @@ def send_daily_digest(
             instagram_handle=instagram_handle,
             summary=summary,
             setters=setters,
-            date_range=date_range
+            date_range=date_range,
+            configured_stages=configured_stages
         )
