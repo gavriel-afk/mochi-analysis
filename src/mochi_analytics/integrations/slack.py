@@ -149,7 +149,26 @@ class SlackClient:
 
         # Add total stage changes at the top
         stage_changes = summary.get('stage_changes', {})
-        if stage_changes:
+
+        # If we have configured stages, show all of them (even if 0)
+        # Otherwise, show only stages with count > 0
+        if configured_stages:
+            stage_text = ""
+            for stage in configured_stages:
+                count = stage_changes.get(stage, 0)
+                stage_name = stage.replace('_', ' ').title()
+                stage_text += f"*{stage_name}:* {count}\n"
+
+            stage_text += "\n_Below is the breakdown per setter:_"
+
+            blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": stage_text
+                }
+            })
+        elif stage_changes:
             stage_text = ""
             for stage, count in sorted(stage_changes.items()):
                 if count > 0:
