@@ -2,12 +2,17 @@
 Mochi API integration for fetching conversation data.
 """
 
+import json
+import logging
 import os
 from datetime import date
 from typing import Any
 
 import httpx
+from json_repair import repair_json
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 
 class MochiAPIError(Exception):
@@ -89,7 +94,20 @@ class MochiClient:
             response = self.client.get(endpoint, params=params)
             response.raise_for_status()
 
-            data = response.json()
+            # Try to parse JSON, with auto-repair on failure
+            try:
+                data = response.json()
+            except json.JSONDecodeError as json_err:
+                logger.warning(f"JSON parse error: {json_err}. Attempting auto-repair...")
+                try:
+                    # Use json_repair to fix malformed JSON
+                    repaired = repair_json(response.text)
+                    data = json.loads(repaired)
+                    logger.info("JSON auto-repair successful")
+                except Exception as repair_err:
+                    raise MochiAPIError(
+                        f"JSON parsing failed and auto-repair unsuccessful: {json_err}"
+                    ) from repair_err
 
             if not isinstance(data, list):
                 raise MochiAPIError(f"Expected list response, got {type(data)}")

@@ -31,3 +31,4 @@ python-dateutil==2.8.2
 pytz==2023.3.post1
 click==8.1.7
 tomli==2.0.1
+json-repair>=0.25.0
