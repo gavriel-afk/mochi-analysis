@@ -169,9 +169,9 @@ class AirtableClient:
                         analysis_record = self.analysis_table.get(analysis_record_id)
                         analysis_fields = analysis_record["fields"]
 
-                        # Filter: only Type="metrics"
+                        # Filter: accept Type="metrics" or Type="script"
                         record_type = analysis_fields.get("Type", "")
-                        if record_type != "metrics":
+                        if record_type not in ("metrics", "script"):
                             logger.debug(f"Org {org_name}: skipping Analysis record with Type='{record_type}'")
                             continue
 
