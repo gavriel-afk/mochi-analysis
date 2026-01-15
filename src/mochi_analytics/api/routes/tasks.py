@@ -21,7 +21,10 @@ async def run_daily_updates(request: TaskRequest) -> TaskResponse:
     This endpoint should be called by cron scheduler to send daily digests.
     """
     try:
-        result = run_daily_updates_task(dry_run=request.dry_run)
+        result = run_daily_updates_task(
+            dry_run=request.dry_run,
+            org_filter=request.org_filter
+        )
 
         return TaskResponse(
             status="completed",

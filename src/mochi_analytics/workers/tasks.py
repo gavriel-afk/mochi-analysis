@@ -76,7 +76,7 @@ def run_analysis_task(
     return result.model_dump()
 
 
-def run_daily_updates_task(dry_run: bool = False) -> dict:
+def run_daily_updates_task(dry_run: bool = False, org_filter: str | None = None) -> dict:
     """
     Run daily Slack updates for all configured organizations.
 
@@ -86,6 +86,7 @@ def run_daily_updates_task(dry_run: bool = False) -> dict:
 
     Args:
         dry_run: If True, don't actually send Slack messages
+        org_filter: Optional organization name filter (case-insensitive substring match)
 
     Returns:
         Summary of updates sent
@@ -101,6 +102,17 @@ def run_daily_updates_task(dry_run: bool = False) -> dict:
 
     updates_sent = 0
     errors = []
+
+    # Filter by organization name if specified
+    if org_filter:
+        from mochi_analytics.integrations import get_organization_by_id
+        filtered_configs = []
+        for config in slack_configs:
+            org = get_organization_by_id(config.organization_id)
+            if org and org_filter.lower() in org.organization_name.lower():
+                filtered_configs.append(config)
+        slack_configs = filtered_configs
+        logger.info(f"Filtered to {len(slack_configs)} orgs matching '{org_filter}'")
 
     for config in slack_configs:
         try:
