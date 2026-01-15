@@ -1,0 +1,85 @@
+[
+  {
+    "id": "conv_001",
+    "organization": "org_001",
+    "stage": "NEW_LEAD",
+    "setter_email": "john@example.com",
+    "created_at": "2025-01-15T10:00:00Z",
+    "messages": [
+      {
+        "id": "msg_001",
+        "sender": "LEAD",
+        "content": "Hi, I'm interested in your service",
+        "timestamp": "2025-01-15T10:00:00Z",
+        "media": []
+      },
+      {
+        "id": "msg_002",
+        "sender": "CREATOR",
+        "content": "Thanks for reaching out! Let me tell you more...",
+        "timestamp": "2025-01-15T10:05:00Z",
+        "media": []
+      },
+      {
+        "id": "msg_003",
+        "sender": "LEAD",
+        "content": "That sounds great!",
+        "timestamp": "2025-01-15T10:10:00Z",
+        "media": []
+      }
+    ]
+  },
+  {
+    "id": "conv_002",
+    "organization": "org_001",
+    "stage": "QUALIFIED",
+    "setter_email": "jane@example.com",
+    "created_at": "2025-01-15T14:00:00Z",
+    "messages": [
+      {
+        "id": "msg_004",
+        "sender": "LEAD",
+        "content": "Can you send me more information?",
+        "timestamp": "2025-01-15T14:00:00Z",
+        "media": []
+      },
+      {
+        "id": "msg_005",
+        "sender": "CREATOR",
+        "content": "Of course! Here's what we offer...",
+        "timestamp": "2025-01-15T14:30:00Z",
+        "media": [{"type": "image", "url": "https://example.com/img.png"}]
+      },
+      {
+        "id": "msg_006",
+        "sender": "LEAD",
+        "content": "Perfect, I'd like to book a call",
+        "timestamp": "2025-01-15T15:00:00Z",
+        "media": []
+      }
+    ]
+  },
+  {
+    "id": "conv_003",
+    "organization": "org_001",
+    "stage": "BOOKED_CALL",
+    "setter_email": "john@example.com",
+    "created_at": "2025-01-16T09:00:00Z",
+    "messages": [
+      {
+        "id": "msg_007",
+        "sender": "LEAD",
+        "content": "Ready to get started!",
+        "timestamp": "2025-01-16T09:00:00Z",
+        "media": []
+      },
+      {
+        "id": "msg_008",
+        "sender": "CREATOR",
+        "content": "Great! Let's schedule your onboarding call.",
+        "timestamp": "2025-01-16T09:15:00Z",
+        "media": []
+      }
+    ]
+  }
+]
