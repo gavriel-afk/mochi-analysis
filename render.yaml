@@ -13,18 +13,20 @@ services:
     region: oregon
     plan: starter
     runtime: python
-    buildCommand: "pip install -r requirements/base.txt && pip install -e ."
-    startCommand: "uvicorn mochi_analytics.api:app --host 0.0.0.0 --port $PORT"
+    buildCommand: "pip install -r requirements/base.txt && pip install -e . && PYTHONPATH=src alembic upgrade head"
+    startCommand: "uvicorn mochi_analytics.api.app:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
           name: mochi-analytics-db
           property: connectionString
-      - key: PYTHON_VERSION
-        value: 3.11.0
+      - key: PYTHONPATH
+        value: src
+      - key: MOCHI_API_URL
+        value: https://api.themochi.app
       - key: MOCHI_SESSION_ID
         sync: false
-      - key: GOOGLE_API_KEY
+      - key: GEMINI_API_KEY
         sync: false
       - key: AIRTABLE_API_KEY
         sync: false
@@ -32,8 +34,10 @@ services:
         sync: false
       - key: SLACK_BOT_TOKEN
         sync: false
-      - key: FRAMER_API_URL
-        value: https://your-framer-api.com
+      - key: FRAMER_API_KEY
+        sync: false
+      - key: FRAMER_SITE_ID
+        sync: false
     healthCheckPath: /health
 
   # Cron Service for Daily Updates
@@ -44,21 +48,27 @@ services:
     runtime: python
     buildCommand: "pip install -r requirements/base.txt && pip install -e ."
     schedule: "0 * * * *"  # Every hour
-    startCommand: "python -c 'from mochi_analytics.workers import run_daily_updates_task; result = run_daily_updates_task(); print(result)'"
+    command: "curl -X POST https://mochi-analytics-api.onrender.com/api/v1/tasks/daily-updates -H 'Content-Type: application/json' -d '{\"dry_run\": false}'"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
           name: mochi-analytics-db
           property: connectionString
-      - key: PYTHON_VERSION
-        value: 3.11.0
+      - key: PYTHONPATH
+        value: src
+      - key: MOCHI_API_URL
+        value: https://api.themochi.app
       - key: MOCHI_SESSION_ID
         sync: false
-      - key: GOOGLE_API_KEY
+      - key: GEMINI_API_KEY
         sync: false
       - key: AIRTABLE_API_KEY
         sync: false
       - key: AIRTABLE_BASE_ID
         sync: false
       - key: SLACK_BOT_TOKEN
+        sync: false
+      - key: FRAMER_API_KEY
+        sync: false
+      - key: FRAMER_SITE_ID
         sync: false
