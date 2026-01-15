@@ -31,7 +31,10 @@ def analyze_setters_by_sender(conversations: List[Conversation]) -> Dict[str, Se
         # Track stage for each setter involved
         setters_in_conv = set()
 
-        for i, msg in enumerate(conv.messages):
+        # Get actual messages (filter out status changes)
+        messages = conv.get_actual_messages()
+
+        for i, msg in enumerate(messages):
             if msg.sender == "CREATOR":
                 # Attribute to sender (could extract from msg if available, or use setter_email)
                 setter = conv.setter_email  # Default to conversation owner
@@ -49,7 +52,7 @@ def analyze_setters_by_sender(conversations: List[Conversation]) -> Dict[str, Se
 
                 # Check for reply
                 reply_found = False
-                for future_msg in conv.messages[i+1:]:
+                for future_msg in messages[i+1:]:
                     if future_msg.sender == "LEAD":
                         future_time = parse_timestamp(future_msg.timestamp)
                         time_diff = (future_time - msg_time).total_seconds()
@@ -130,8 +133,11 @@ def analyze_setters_by_assignment(conversations: List[Conversation]) -> Dict[str
         if conv.stage:
             data['stage_changes'][conv.stage] += 1
 
+        # Get actual messages (filter out status changes)
+        messages = conv.get_actual_messages()
+
         # Process messages
-        for i, msg in enumerate(conv.messages):
+        for i, msg in enumerate(messages):
             if msg.sender == "CREATOR":
                 data['messages_sent'] += 1
                 data['total_creator_messages'] += 1
@@ -143,7 +149,7 @@ def analyze_setters_by_assignment(conversations: List[Conversation]) -> Dict[str
 
                 # Check for reply
                 reply_found = False
-                for future_msg in conv.messages[i+1:]:
+                for future_msg in messages[i+1:]:
                     if future_msg.sender == "LEAD":
                         future_time = parse_timestamp(future_msg.timestamp)
                         time_diff = (future_time - msg_time).total_seconds()

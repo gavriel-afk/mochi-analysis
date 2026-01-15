@@ -39,8 +39,11 @@ def calculate_core_metrics(conversations: List[Conversation]) -> Summary:
         if conv.stage:
             stage_changes[conv.stage] += 1
 
+        # Get actual messages (filter out status changes)
+        messages = conv.get_actual_messages()
+
         # Process messages
-        for i, msg in enumerate(conv.messages):
+        for i, msg in enumerate(messages):
             # Count by sender
             if msg.sender == "LEAD":
                 messages_received += 1
@@ -54,7 +57,7 @@ def calculate_core_metrics(conversations: List[Conversation]) -> Summary:
                 msg_time = parse_timestamp(msg.timestamp)
 
                 # Look for next LEAD message
-                for future_msg in conv.messages[i+1:]:
+                for future_msg in messages[i+1:]:
                     if future_msg.sender == "LEAD":
                         future_time = parse_timestamp(future_msg.timestamp)
                         time_diff = (future_time - msg_time).total_seconds()

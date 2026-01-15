@@ -42,8 +42,11 @@ def analyze_time_series(
         if conv.stage:
             daily_stages[conv_date][conv.stage] += 1
 
+        # Get actual messages (filter out status changes)
+        messages = conv.get_actual_messages()
+
         # Process messages for activity patterns
-        for i, msg in enumerate(conv.messages):
+        for i, msg in enumerate(messages):
             msg_time = parse_timestamp(msg.timestamp)
             if msg_time.tzinfo is None:
                 msg_time = pytz.UTC.localize(msg_time)
@@ -58,7 +61,7 @@ def analyze_time_series(
 
                 # Check for delayed response (> 24h before creator replied)
                 if i > 0:
-                    prev_msg = conv.messages[i-1]
+                    prev_msg = messages[i-1]
                     if prev_msg.sender == "LEAD":
                         prev_time = parse_timestamp(prev_msg.timestamp)
                         if prev_time.tzinfo is None:

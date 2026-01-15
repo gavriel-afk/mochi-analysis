@@ -1,0 +1,280 @@
+{
+  "metadata": {
+    "organization_id": "c7092f15-62ca-473f-b2d7-9e66a7553b6d",
+    "organization_name": "Unknown",
+    "timezone": "UTC",
+    "analysis_period": {
+      "start": "2026-01-04",
+      "end": "2026-01-12"
+    },
+    "config": {
+      "similarity_threshold": 85.0,
+      "include_avatars": false,
+      "include_scripts": false,
+      "include_objections": false
+    }
+  },
+  "summary": {
+    "total_conversations": 313,
+    "total_messages_received": 1800,
+    "total_messages_sent": 3205,
+    "total_messages_sent_from_mochi": 3205,
+    "creator_messages_with_reply_within_48h": 2440,
+    "creator_message_reply_rate_within_48h": 76.13,
+    "median_reply_delay_seconds": 2337,
+    "stage_changes": {
+      "NEW_LEAD": 103,
+      "IN_CONTACT": 201,
+      "UNQUALIFIED": 9
+    },
+    "media": {
+      "total": 121,
+      "by_type": {
+        "other": 121
+      }
+    }
+  },
+  "time_series": {
+    "stage_changes_by_day": [
+      {
+        "date": "Sun, 04 Jan 26",
+        "date_iso": "2026-01-04",
+        "stages": {}
+      },
+      {
+        "date": "Mon, 05 Jan 26",
+        "date_iso": "2026-01-05",
+        "stages": {}
+      },
+      {
+        "date": "Tue, 06 Jan 26",
+        "date_iso": "2026-01-06",
+        "stages": {
+          "IN_CONTACT": 44,
+          "NEW_LEAD": 26,
+          "UNQUALIFIED": 2
+        }
+      },
+      {
+        "date": "Wed, 07 Jan 26",
+        "date_iso": "2026-01-07",
+        "stages": {
+          "IN_CONTACT": 36,
+          "NEW_LEAD": 24,
+          "UNQUALIFIED": 2
+        }
+      },
+      {
+        "date": "Thu, 08 Jan 26",
+        "date_iso": "2026-01-08",
+        "stages": {
+          "NEW_LEAD": 11,
+          "IN_CONTACT": 31,
+          "UNQUALIFIED": 1
+        }
+      },
+      {
+        "date": "Fri, 09 Jan 26",
+        "date_iso": "2026-01-09",
+        "stages": {
+          "NEW_LEAD": 13,
+          "IN_CONTACT": 28,
+          "UNQUALIFIED": 1
+        }
+      },
+      {
+        "date": "Sat, 10 Jan 26",
+        "date_iso": "2026-01-10",
+        "stages": {
+          "IN_CONTACT": 26,
+          "NEW_LEAD": 11
+        }
+      },
+      {
+        "date": "Sun, 11 Jan 26",
+        "date_iso": "2026-01-11",
+        "stages": {
+          "NEW_LEAD": 9,
+          "IN_CONTACT": 10,
+          "UNQUALIFIED": 1
+        }
+      },
+      {
+        "date": "Mon, 12 Jan 26",
+        "date_iso": "2026-01-12",
+        "stages": {
+          "IN_CONTACT": 26,
+          "NEW_LEAD": 9,
+          "UNQUALIFIED": 2
+        }
+      }
+    ],
+    "lead_activity_by_time": {
+      "15_18": 123,
+      "12_15": 87,
+      "03_06": 243,
+      "06_09": 113,
+      "18_21": 343,
+      "21_24": 434,
+      "00_03": 409,
+      "09_12": 48
+    },
+    "setter_activity_by_time": {
+      "15_18": 197,
+      "00_03": 658,
+      "03_06": 401,
+      "06_09": 283,
+      "21_24": 833,
+      "12_15": 80,
+      "18_21": 653,
+      "09_12": 100
+    },
+    "delayed_responses_by_time": {
+      "00_03": 1,
+      "12_15": 1,
+      "18_21": 1,
+      "21_24": 2,
+      "06_09": 2,
+      "15_18": 1
+    }
+  },
+  "setters_by_sent_by": {
+    "harveyjohnson14@icloud.com": {
+      "total_conversations": 139,
+      "total_messages_sent_from_mochi": 1699,
+      "creator_messages_with_reply_within_48h": 1302,
+      "creator_message_reply_rate_within_48h": 76.63,
+      "median_reply_delay_seconds": 1414,
+      "stage_changes": {
+        "NEW_LEAD": 37,
+        "IN_CONTACT": 101,
+        "UNQUALIFIED": 1
+      },
+      "setter_activity_by_time": {
+        "15_18": 98,
+        "00_03": 392,
+        "06_09": 154,
+        "21_24": 409,
+        "09_12": 41,
+        "03_06": 206,
+        "18_21": 346,
+        "12_15": 53
+      },
+      "lead_activity_by_time": {
+        "06_09": 45,
+        "12_15": 32,
+        "18_21": 156,
+        "21_24": 181,
+        "00_03": 175,
+        "03_06": 86,
+        "15_18": 54,
+        "09_12": 17
+      },
+      "delayed_responses_by_time": {}
+    },
+    "matthewjarrettlillie@gmail.com": {
+      "total_conversations": 144,
+      "total_messages_sent_from_mochi": 1506,
+      "creator_messages_with_reply_within_48h": 1138,
+      "creator_message_reply_rate_within_48h": 75.56,
+      "median_reply_delay_seconds": 3357,
+      "stage_changes": {
+        "IN_CONTACT": 100,
+        "NEW_LEAD": 40,
+        "UNQUALIFIED": 4
+      },
+      "setter_activity_by_time": {
+        "03_06": 195,
+        "06_09": 129,
+        "15_18": 99,
+        "21_24": 424,
+        "00_03": 266,
+        "12_15": 27,
+        "18_21": 307,
+        "09_12": 59
+      },
+      "lead_activity_by_time": {
+        "03_06": 105,
+        "06_09": 39,
+        "18_21": 151,
+        "00_03": 143,
+        "12_15": 32,
+        "21_24": 195,
+        "15_18": 45,
+        "09_12": 12
+      },
+      "delayed_responses_by_time": {}
+    }
+  },
+  "setters_by_assignment": {
+    "harveyjohnson14@icloud.com": {
+      "total_conversations": 156,
+      "total_messages_sent_from_mochi": 1699,
+      "creator_messages_with_reply_within_48h": 1302,
+      "creator_message_reply_rate_within_48h": 76.63,
+      "median_reply_delay_seconds": 1414,
+      "stage_changes": {
+        "NEW_LEAD": 53,
+        "IN_CONTACT": 101,
+        "UNQUALIFIED": 2
+      },
+      "setter_activity_by_time": {
+        "15_18": 98,
+        "00_03": 392,
+        "06_09": 154,
+        "21_24": 409,
+        "09_12": 41,
+        "03_06": 206,
+        "18_21": 346,
+        "12_15": 53
+      },
+      "lead_activity_by_time": {
+        "15_18": 68,
+        "12_15": 45,
+        "03_06": 113,
+        "06_09": 59,
+        "18_21": 173,
+        "21_24": 213,
+        "00_03": 218,
+        "09_12": 27
+      },
+      "delayed_responses_by_time": {}
+    },
+    "matthewjarrettlillie@gmail.com": {
+      "total_conversations": 157,
+      "total_messages_sent_from_mochi": 1506,
+      "creator_messages_with_reply_within_48h": 1138,
+      "creator_message_reply_rate_within_48h": 75.56,
+      "median_reply_delay_seconds": 3357,
+      "stage_changes": {
+        "NEW_LEAD": 50,
+        "IN_CONTACT": 100,
+        "UNQUALIFIED": 7
+      },
+      "setter_activity_by_time": {
+        "03_06": 195,
+        "06_09": 129,
+        "15_18": 99,
+        "21_24": 424,
+        "00_03": 266,
+        "12_15": 27,
+        "18_21": 307,
+        "09_12": 59
+      },
+      "lead_activity_by_time": {
+        "03_06": 130,
+        "06_09": 54,
+        "12_15": 42,
+        "18_21": 170,
+        "00_03": 191,
+        "21_24": 221,
+        "09_12": 21,
+        "15_18": 55
+      },
+      "delayed_responses_by_time": {}
+    }
+  },
+  "scripts": null,
+  "objections": null,
+  "avatars": null
+}

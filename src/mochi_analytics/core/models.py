@@ -22,21 +22,91 @@ class AnalysisConfig(BaseModel):
 
 class Message(BaseModel):
     """Single message in conversation."""
-    id: str
     sender: str  # "LEAD" or "CREATOR"
     content: str
-    timestamp: str  # ISO format
-    media: list[dict] = Field(default_factory=list)
+    created_at: str  # ISO format timestamp
+    attachments: Optional[list[dict]] = None
+
+    # Optional fields from real Mochi export
+    sender_id: Optional[str] = None
+    recipient_id: Optional[str] = None
+    sent_by: Optional[str] = None
+    is_sent_from_mochi: Optional[bool] = False
+    setter_email: Optional[str] = None
+    status_change: Optional[str] = None  # For status change entries
+
+    # Computed field for backwards compatibility
+    @property
+    def timestamp(self) -> str:
+        """Alias for created_at."""
+        return self.created_at
+
+    @property
+    def media(self) -> list[dict]:
+        """Convert attachments to media format."""
+        return self.attachments or []
 
 
 class Conversation(BaseModel):
     """Conversation with messages."""
-    id: str
-    organization: str
-    stage: str  # One of STAGE_TYPES
+    conversation_id: str
+    organization_id: str
+    organization_name: Optional[str] = None
+    current_stage: str  # NEW, QUALIFIED, etc.
     setter_email: str
-    created_at: str
-    messages: list[Message]
+    messages: list[dict]  # Can contain messages or status changes
+
+    # Optional fields
+    setter_name: Optional[str] = None
+    closer_email: Optional[str] = None
+    closer_name: Optional[str] = None
+
+    # Computed fields for backwards compatibility
+    @property
+    def id(self) -> str:
+        """Alias for conversation_id."""
+        return self.conversation_id
+
+    @property
+    def organization(self) -> str:
+        """Alias for organization_id."""
+        return self.organization_id
+
+    @property
+    def stage(self) -> str:
+        """Map current_stage to standard stage names."""
+        stage_mapping = {
+            "NEW": "NEW_LEAD",
+            "QUALIFIED": "QUALIFIED",
+            "BOOKED": "BOOKED_CALL",
+            "BOOKED_CALL": "BOOKED_CALL",
+            "WON": "WON",
+            "LOST": "LOST",
+            "UNQUALIFIED": "UNQUALIFIED",
+            "IN_CONTACT": "IN_CONTACT",
+            "DEPOSIT": "DEPOSIT",
+            "NO_SHOW": "NO_SHOW"
+        }
+        return stage_mapping.get(self.current_stage, self.current_stage)
+
+    @property
+    def created_at(self) -> str:
+        """Get conversation creation time from first message."""
+        actual_messages = [m for m in self.messages if isinstance(m, dict) and "sender" in m]
+        if actual_messages:
+            return actual_messages[0].get("created_at", "")
+        return ""
+
+    def get_actual_messages(self) -> list[Message]:
+        """Filter out status changes and return only actual messages."""
+        actual = []
+        for msg in self.messages:
+            if isinstance(msg, dict) and "sender" in msg and "content" in msg:
+                try:
+                    actual.append(Message(**msg))
+                except Exception:
+                    continue
+        return actual
 
 
 # ===== Output Models =====
