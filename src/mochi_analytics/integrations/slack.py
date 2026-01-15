@@ -166,8 +166,12 @@ class SlackClient:
 
         # Add setter performance if available
         if setters:
-            # setters is a dict like {"setter@email.com": SetterMetrics}
+            # setters is a dict like {"setter@email.com": {...metrics...}}
             for setter_email, metrics in setters.items():
+                # Ensure metrics is a dict
+                if not isinstance(metrics, dict):
+                    metrics = dict(metrics) if hasattr(metrics, '__dict__') else {}
+
                 # Add divider before each setter
                 blocks.append({"type": "divider"})
 
@@ -189,7 +193,7 @@ class SlackClient:
                 })
 
                 # Add messages sent count
-                messages_sent = metrics.get('total_messages_sent_from_mochi', 0)
+                messages_sent = metrics.get('total_messages_sent_from_mochi', 0) if isinstance(metrics, dict) else 0
                 blocks.append({
                     "type": "section",
                     "text": {
@@ -199,7 +203,7 @@ class SlackClient:
                 })
 
                 # Add stage breakdown in 2-column format
-                setter_stages = metrics.get('stage_changes', {})
+                setter_stages = metrics.get('stage_changes', {}) if isinstance(metrics, dict) else {}
                 if setter_stages:
                     fields = []
                     for stage, count in sorted(setter_stages.items()):
