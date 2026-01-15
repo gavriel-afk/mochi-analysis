@@ -141,6 +141,7 @@ async def debug_slack_configs():
                     "organization_id": c.organization_id,
                     "slack_channel": c.slack_channel,
                     "stage_labels": c.stage_labels,
+                    "script_configs": [s.model_dump() for s in c.script_configs],
                     "schedule_time": c.schedule_time,
                     "active": c.active
                 }
