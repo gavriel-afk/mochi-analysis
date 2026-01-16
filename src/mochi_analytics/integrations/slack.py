@@ -113,7 +113,8 @@ class SlackClient:
         setters: dict[str, Any] | None = None,
         date_range: str | None = None,
         stage_labels: dict[str, str] | None = None,
-        script_results: list | None = None
+        script_results: list | None = None,
+        grouped_results: list | None = None
     ) -> dict[str, Any]:
         """
         Send a formatted daily digest message.
@@ -127,6 +128,7 @@ class SlackClient:
             date_range: Date range string (e.g., "Jan 8 - Jan 14")
             stage_labels: Stage name to display label mapping from Analysis table
             script_results: Script search results (optional)
+            grouped_results: Grouped/summed script results (optional)
 
         Returns:
             API response
@@ -152,8 +154,8 @@ class SlackClient:
         # Add total stage changes at the top
         stage_changes = summary.get('stage_changes', {})
 
-        # Show stages and scripts together in top summary
-        if stage_labels or script_results:
+        # Show stages, scripts, and grouped metrics together in top summary
+        if stage_labels or script_results or grouped_results:
             stage_text = ""
 
             # Add stage metrics
@@ -166,6 +168,11 @@ class SlackClient:
             # Add script metrics (merged into same list)
             if script_results:
                 for result in script_results:
+                    stage_text += f"*{result.label}:* {result.total_matches}\n"
+
+            # Add grouped metrics (summed scripts)
+            if grouped_results:
+                for result in grouped_results:
                     stage_text += f"*{result.label}:* {result.total_matches}\n"
 
             stage_text += "\n_Below is the breakdown per setter:_"
@@ -244,6 +251,16 @@ class SlackClient:
                                 "text": f"*{result.label}:* {script_count}"
                             })
 
+                    # Add grouped metrics for this setter
+                    if grouped_results:
+                        for result in grouped_results:
+                            setter_grouped_data = result.setters_breakdown.get(setter_email, {})
+                            grouped_count = setter_grouped_data.get("matches", 0) if isinstance(setter_grouped_data, dict) else 0
+                            fields.append({
+                                "type": "mrkdwn",
+                                "text": f"*{result.label}:* {grouped_count}"
+                            })
+
                     if fields:
                         blocks.append({
                             "type": "section",
@@ -277,7 +294,8 @@ def send_daily_digest(
     date_range: str | None = None,
     bot_token: str | None = None,
     stage_labels: dict[str, str] | None = None,
-    script_results: list | None = None
+    script_results: list | None = None,
+    grouped_results: list | None = None
 ) -> dict[str, Any]:
     """
     Send daily digest message (convenience function).
@@ -292,6 +310,7 @@ def send_daily_digest(
         bot_token: Bot token (uses env var if not provided)
         stage_labels: Stage name to display label mapping from Analysis table
         script_results: Script search results (optional)
+        grouped_results: Grouped/summed script results (optional)
 
     Returns:
         API response
@@ -309,5 +328,6 @@ def send_daily_digest(
             setters=setters,
             date_range=date_range,
             stage_labels=stage_labels,
-            script_results=script_results
+            script_results=script_results,
+            grouped_results=grouped_results
         )

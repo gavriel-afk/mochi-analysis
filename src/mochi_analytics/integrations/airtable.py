@@ -38,6 +38,16 @@ class ScriptAnalysisConfig(BaseModel):
     )
 
 
+class GroupedAnalysisConfig(BaseModel):
+    """Configuration for grouped/summed analysis metrics."""
+
+    label: str = Field(..., description="Display label for the group")
+    member_configs: list[ScriptAnalysisConfig] = Field(
+        default_factory=list,
+        description="Script configs to sum together"
+    )
+
+
 class SlackDailyConfig(BaseModel):
     """Configuration for daily Slack updates."""
 
@@ -51,6 +61,10 @@ class SlackDailyConfig(BaseModel):
     script_configs: list[ScriptAnalysisConfig] = Field(
         default_factory=list,
         description="Script analysis configurations from Analysis table (Type='script')"
+    )
+    grouped_configs: list[GroupedAnalysisConfig] = Field(
+        default_factory=list,
+        description="Grouped analysis configurations from Analysis table (Type='group')"
     )
     schedule_time: str = Field(
         default="",
@@ -181,6 +195,7 @@ class AirtableClient:
             analysis_links = fields.get("Analysis", [])
             stage_labels = {}
             script_configs = []
+            grouped_configs = []
 
             if analysis_links:
                 logger.debug(f"Org {org_name}: found {len(analysis_links)} Analysis links")
@@ -219,6 +234,42 @@ class AirtableClient:
                                     threshold=float(threshold) if threshold else 85.0
                                 ))
                                 logger.debug(f"Org {org_name}: added script config '{label or query[:50]}'")
+
+                        elif record_type == "group":
+                            # Parse group: Label -> display label, Grouping -> linked Analysis records to sum
+                            group_label = analysis_fields.get("Label", "")
+                            grouping_links = analysis_fields.get("Grouping", [])
+
+                            if group_label and grouping_links:
+                                # Fetch each linked Analysis record and create script configs
+                                member_configs = []
+                                for member_id in grouping_links:
+                                    try:
+                                        member_record = self.analysis_table.get(member_id)
+                                        member_fields = member_record["fields"]
+                                        # Only include script types
+                                        if member_fields.get("Type") == "script":
+                                            query = member_fields.get("Name", "")
+                                            match_type = member_fields.get("Group", "token_set")
+                                            threshold = member_fields.get("Percentage", 85.0)
+                                            if query:
+                                                if match_type not in ("ratio", "token_set", "partial"):
+                                                    match_type = "token_set"
+                                                member_configs.append(ScriptAnalysisConfig(
+                                                    query=query,
+                                                    label=member_fields.get("Label", query[:50]),
+                                                    match_type=match_type,
+                                                    threshold=float(threshold) if threshold else 85.0
+                                                ))
+                                    except Exception as e:
+                                        logger.warning(f"Failed to fetch grouped Analysis record {member_id}: {e}")
+
+                                if member_configs:
+                                    grouped_configs.append(GroupedAnalysisConfig(
+                                        label=group_label,
+                                        member_configs=member_configs
+                                    ))
+                                    logger.debug(f"Org {org_name}: added group config '{group_label}' with {len(member_configs)} members")
                         else:
                             logger.debug(f"Org {org_name}: skipping Analysis record with Type='{record_type}'")
                     except Exception as e:
@@ -232,7 +283,7 @@ class AirtableClient:
                 logger.info(f"Org {org_name}: no Schedule Time set (will only run with force_send=True)")
                 schedule_time = ""  # Empty string indicates no schedule
 
-            logger.info(f"Org {org_name}: adding config with {len(stage_labels)} stage labels, {len(script_configs)} script configs")
+            logger.info(f"Org {org_name}: adding config with {len(stage_labels)} stage labels, {len(script_configs)} script configs, {len(grouped_configs)} grouped configs")
             configs.append(
                 SlackDailyConfig(
                     record_id=record["id"],
@@ -240,6 +291,7 @@ class AirtableClient:
                     slack_channel=fields.get("Slack Channel", ""),
                     stage_labels=stage_labels,
                     script_configs=script_configs,
+                    grouped_configs=grouped_configs,
                     schedule_time=schedule_time,
                     active=fields.get("Active", False)
                 )

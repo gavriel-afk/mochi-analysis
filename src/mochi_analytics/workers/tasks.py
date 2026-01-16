@@ -214,6 +214,50 @@ def run_daily_updates_task(dry_run: bool = False, org_filter: str | None = None,
                     target_date=yesterday_org_tz
                 )
 
+            # Run grouped analysis if configured
+            grouped_results = None
+            if config.grouped_configs:
+                from mochi_analytics.core.script_search import ScriptSearchResult
+                grouped_results = []
+                for group in config.grouped_configs:
+                    logger.info(f"Running grouped analysis '{group.label}' with {len(group.member_configs)} members for {org.organization_name}")
+                    # Run script searches for each member
+                    member_results = run_script_searches(
+                        conversations=conversations,
+                        script_configs=group.member_configs,
+                        timezone=org.timezone,
+                        target_date=yesterday_org_tz
+                    )
+                    # Sum the results
+                    total_matches = sum(r.total_matches for r in member_results)
+                    total_replies = sum(r.total_replies for r in member_results)
+                    reply_rate = (total_replies / total_matches * 100) if total_matches > 0 else 0.0
+
+                    # Merge setters_breakdown
+                    merged_setters: dict[str, dict[str, int | float]] = {}
+                    for r in member_results:
+                        for setter, data in r.setters_breakdown.items():
+                            if setter not in merged_setters:
+                                merged_setters[setter] = {"matches": 0, "replies": 0, "reply_rate": 0.0}
+                            merged_setters[setter]["matches"] += data.get("matches", 0)
+                            merged_setters[setter]["replies"] += data.get("replies", 0)
+
+                    # Calculate reply_rate for each setter
+                    for setter, data in merged_setters.items():
+                        matches = data["matches"]
+                        replies = data["replies"]
+                        data["reply_rate"] = (replies / matches * 100) if matches > 0 else 0.0
+
+                    grouped_results.append(ScriptSearchResult(
+                        query="[grouped]",
+                        label=group.label,
+                        total_matches=total_matches,
+                        total_replies=total_replies,
+                        reply_rate=round(reply_rate, 1),
+                        setters_breakdown=merged_setters
+                    ))
+                    logger.info(f"Grouped '{group.label}': {total_matches} total matches")
+
             # Send Slack digest
             if not dry_run:
                 send_daily_digest(
@@ -224,7 +268,8 @@ def run_daily_updates_task(dry_run: bool = False, org_filter: str | None = None,
                     setters=result.setters_by_sent_by if result.setters_by_sent_by else None,
                     date_range=str(yesterday_org_tz),
                     stage_labels=config.stage_labels,
-                    script_results=script_results
+                    script_results=script_results,
+                    grouped_results=grouped_results
                 )
                 logger.info(f"Sent daily digest for {org_id} to {config.slack_channel}")
                 updates_sent += 1
