@@ -152,13 +152,21 @@ class SlackClient:
         # Add total stage changes at the top
         stage_changes = summary.get('stage_changes', {})
 
-        # Show stages from Analysis table (Type="metrics")
-        if stage_labels:
+        # Show stages and scripts together in top summary
+        if stage_labels or script_results:
             stage_text = ""
-            for stage in stage_labels.keys():
-                count = stage_changes.get(stage, 0)
-                display_name = stage_labels[stage]
-                stage_text += f"*{display_name}:* {count}\n"
+
+            # Add stage metrics
+            if stage_labels:
+                for stage in stage_labels.keys():
+                    count = stage_changes.get(stage, 0)
+                    display_name = stage_labels[stage]
+                    stage_text += f"*{display_name}:* {count}\n"
+
+            # Add script metrics (merged into same list)
+            if script_results:
+                for result in script_results:
+                    stage_text += f"*{result.label}:* {result.total_matches}\n"
 
             stage_text += "\n_Below is the breakdown per setter:_"
 
@@ -169,32 +177,6 @@ class SlackClient:
                     "text": stage_text
                 }
             })
-
-        # Add script performance section if available
-        if script_results:
-            blocks.append({"type": "divider"})
-            blocks.append({
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": "*Script Performance*"
-                }
-            })
-
-            for result in script_results:
-                script_text = (
-                    f"*{result.label}*\n"
-                    f"Matches: {result.total_matches} | "
-                    f"Replies: {result.total_replies} | "
-                    f"Reply Rate: {result.reply_rate}%"
-                )
-                blocks.append({
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": script_text
-                    }
-                })
 
         # Add setter performance if available
         if setters:
@@ -237,16 +219,30 @@ class SlackClient:
                 # Add stage breakdown in 2-column format
                 setter_stages = metrics.get('stage_changes', {}) if isinstance(metrics, dict) else {}
 
-                # Show stages from Analysis table (Type="metrics")
-                if stage_labels:
+                # Show stages from Analysis table (Type="metrics") and scripts
+                if stage_labels or script_results:
                     fields = []
-                    for stage in stage_labels.keys():
-                        count = setter_stages.get(stage, 0)
-                        display_name = stage_labels[stage]
-                        fields.append({
-                            "type": "mrkdwn",
-                            "text": f"*{display_name}:* {count}"
-                        })
+
+                    # Add stage metrics
+                    if stage_labels:
+                        for stage in stage_labels.keys():
+                            count = setter_stages.get(stage, 0)
+                            display_name = stage_labels[stage]
+                            fields.append({
+                                "type": "mrkdwn",
+                                "text": f"*{display_name}:* {count}"
+                            })
+
+                    # Add script metrics for this setter
+                    if script_results:
+                        for result in script_results:
+                            # Get this setter's count from the script's setters_breakdown
+                            setter_script_data = result.setters_breakdown.get(setter_email, {})
+                            script_count = setter_script_data.get("matches", 0) if isinstance(setter_script_data, dict) else 0
+                            fields.append({
+                                "type": "mrkdwn",
+                                "text": f"*{result.label}:* {script_count}"
+                            })
 
                     if fields:
                         blocks.append({
