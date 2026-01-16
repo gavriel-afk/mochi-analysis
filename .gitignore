@@ -62,3 +62,7 @@ alembic/versions/*.pyc
 
 # Project specific
 mochi_analytics.db
+
+# Local scripts (contains credentials)
+../search_conversations.py
+search_conversations.py

@@ -133,6 +133,109 @@ async def get_task_status():
     return _last_task_result
 
 
+@router.get("/tasks/debug-daily/{org_name}")
+async def debug_daily_update(org_name: str):
+    """
+    Debug endpoint to see what data would be sent for a daily update.
+
+    Returns the processed data (summary, scripts, groups) without sending to Slack.
+    """
+    from datetime import timedelta
+    import pytz
+
+    from mochi_analytics.core.models import Conversation
+    from mochi_analytics.core.analyzer import analyze_conversations_simplified
+    from mochi_analytics.core.script_search import run_script_searches
+    from mochi_analytics.integrations import fetch_conversations, get_organization_by_id
+
+    try:
+        # Find matching config
+        configs = get_slack_configs(active_only=True)
+        matching_config = None
+
+        for config in configs:
+            org = get_organization_by_id(config.organization_id)
+            if org and org_name.lower() in org.organization_name.lower():
+                matching_config = config
+                matching_org = org
+                break
+
+        if not matching_config:
+            raise HTTPException(status_code=404, detail=f"No config found for org matching '{org_name}'")
+
+        # Calculate yesterday in org's timezone
+        org_tz = pytz.timezone(matching_org.timezone)
+        org_now = datetime.now(org_tz)
+        yesterday_org_tz = (org_now - timedelta(days=1)).date()
+
+        # Fetch conversations with buffer
+        fetch_from = yesterday_org_tz - timedelta(days=1)
+        fetch_to = yesterday_org_tz + timedelta(days=1)
+
+        conversations_data = fetch_conversations(
+            org_id=matching_config.organization_id,
+            date_from=fetch_from,
+            date_to=fetch_to
+        )
+
+        conversations = [Conversation.model_validate(c) for c in conversations_data]
+
+        # Run analysis
+        result = analyze_conversations_simplified(
+            conversations,
+            timezone=matching_org.timezone,
+            start_date=yesterday_org_tz,
+            end_date=yesterday_org_tz
+        )
+
+        # Run script searches
+        script_results_data = []
+        if matching_config.script_configs:
+            script_results = run_script_searches(
+                conversations=conversations,
+                script_configs=matching_config.script_configs,
+                timezone=matching_org.timezone,
+                target_date=yesterday_org_tz
+            )
+            script_results_data = [
+                {"label": r.label, "total_matches": r.total_matches}
+                for r in script_results
+            ]
+
+        # Run grouped analysis
+        grouped_results_data = []
+        if matching_config.grouped_configs:
+            for group in matching_config.grouped_configs:
+                member_results = run_script_searches(
+                    conversations=conversations,
+                    script_configs=group.member_configs,
+                    timezone=matching_org.timezone,
+                    target_date=yesterday_org_tz
+                )
+                total_matches = sum(r.total_matches for r in member_results)
+                grouped_results_data.append({
+                    "label": group.label,
+                    "total_matches": total_matches
+                })
+
+        return {
+            "org_name": matching_org.organization_name,
+            "instagram_handle": matching_org.instagram_username,
+            "date_analyzed": str(yesterday_org_tz),
+            "total_conversations_fetched": len(conversations),
+            "stage_labels": matching_config.stage_labels,
+            "stage_changes": result.summary.stage_changes,
+            "script_results": script_results_data,
+            "grouped_results": grouped_results_data
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        raise HTTPException(status_code=500, detail=f"Debug failed: {str(e)}\n{traceback.format_exc()}")
+
+
 @router.get("/tasks/slack-configs")
 async def debug_slack_configs():
     """
